@@ -1,0 +1,53 @@
+# Entity Relationship Diagram - Prescription Platform
+
+```mermaid
+graph TD
+    A[auth.users] --> B[user_profiles]
+    B --> C[practitioner_accounts]
+    B --> D[pharmacies]
+    
+    C --> E[prescriptions]
+    E --> F[prescription_medicines]
+    E --> G[orders]
+    
+    G --> H[payments]
+    G --> I[purchase_orders]
+    I --> J[fulfillment_proofs]
+    
+    D --> K[pharmacy_price_lists]
+    D --> L[pharmacy_accounts]
+    L --> M[withdrawal_requests]
+```
+
+## 核心实体关系说明
+
+### 用户管理层
+- **auth.users**: Supabase内置用户认证表
+- **user_profiles**: 用户基础信息扩展
+- **practitioner_accounts**: 医师账户信息
+- **pharmacies**: 药房基础信息
+
+### 业务核心层
+- **prescriptions**: 处方核心表
+- **prescription_medicines**: 处方药品明细
+- **orders**: 订单管理表
+
+### 财务履约层
+- **payments**: 支付记录表
+- **purchase_orders**: 采购订单表
+- **fulfillment_proofs**: 履约凭证表
+- **pharmacy_accounts**: 药房账户表
+- **withdrawal_requests**: 提现申请表
+
+### 价格管理层
+- **pharmacy_price_lists**: 药房价格表
+
+## 数据隔离策略
+
+### RLS策略概览
+- **医师隔离**: auth.uid() = doctor_id
+- **药房隔离**: pharmacy_id匹配策略
+- **管理员权限**: 全局访问权限
+- **隐私保护**: 零患者个人信息存储
+
+详细RLS策略参考: [supabase-rls-policies.sql](../supabase-patterns/supabase-rls-policies.sql)

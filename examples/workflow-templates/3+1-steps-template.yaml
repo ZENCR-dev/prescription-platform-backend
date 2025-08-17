@@ -1,0 +1,122 @@
+# 3+1 Steps Template - Standard Atomic Task Execution Model
+# Source: CLAUDE.md v6.0 unified workflow template
+
+workflow_name: "Unified 3+1 Steps Template"
+description: "Standard execution template for all atomic tasks"
+version: "v6.0"
+
+# Core 3+1 Steps Structure
+steps:
+  step_1:
+    name: "需求分析与设计"
+    persona: "主实现角色 (frontend|backend|architect)"
+    responsibilities:
+      - "分析任务需求和技术方案"
+      - "设计实现路径和基础架构"
+      - "识别依赖关系和风险"
+      - "确定验证标准和成功指标"
+    deliverables:
+      - "技术方案文档"
+      - "实现路径设计"
+      - "风险评估"
+      - "验证标准"
+
+  step_2:
+    name: "实现与自测"
+    persona: "同一主实现角色"
+    responsibilities:
+      - "完成功能实现"
+      - "编写基础单元测试"
+      - "执行代码格式化和基础检查"
+      - "满足基础质量要求"
+    deliverables:
+      - "功能实现代码"
+      - "单元测试"
+      - "基础质量检查通过"
+
+  step_3:
+    name: "集成准备"
+    persona: "同一主实现角色"
+    responsibilities:
+      - "验证接口兼容性"
+      - "准备集成文档"
+      - "确保代码符合项目规范"
+      - "准备Phase验证所需材料"
+    deliverables:
+      - "接口兼容性验证"
+      - "集成文档"
+      - "代码规范检查"
+
+  step_4:
+    name: "质量验证与提交"
+    persona: "qa persona"
+    responsibilities:
+      - "执行基础质量检查"
+      - "运行测试验证"
+      - "验证功能完整性"
+      - "提交代码并更新状态"
+    deliverables:
+      - "质量检查报告"
+      - "测试验证结果"
+      - "代码提交"
+      - "状态更新"
+
+# 角色选择指导
+persona_selection:
+  frontend_tasks:
+    persona: "frontend"
+    applies_to:
+      - "UI组件开发"
+      - "用户界面实现"
+      - "前端交互逻辑"
+    
+  backend_tasks:
+    persona: "backend"
+    applies_to:
+      - "API实现"
+      - "业务逻辑处理"
+      - "数据库操作"
+      - "基础安全验证"
+    
+  system_tasks:
+    persona: "architect"
+    applies_to:
+      - "架构设计"
+      - "技术选型"
+      - "系统集成"
+      - "复杂重构"
+
+  validation_role:
+    persona: "qa"
+    applies_to: "所有任务的步骤4"
+    responsibilities:
+      - "基础质量检查"
+      - "功能验证"
+      - "代码审查"
+      - "提交管理"
+
+# 医疗平台特殊考虑
+medical_platform_enhancements:
+  security_sensitive_functions:
+    note: "患者数据、认证、处方相关功能"
+    step_1_enhanced:
+      - "基础安全架构考虑"
+      - "HIPAA/FDA合规规划"
+    step_2_enhanced:
+      - "基础安全验证实现"
+      - "患者数据加密处理"
+      - "审计日志记录"
+    step_3_enhanced:
+      - "安全接口验证"
+      - "合规性自检"
+    step_4_enhanced:
+      - "医疗合规验证"
+      - "安全检查强化"
+
+# Usage Instructions
+usage:
+  1. "Choose appropriate persona based on task type"
+  2. "Follow 3+1 steps sequentially"
+  3. "Apply medical enhancements for sensitive functions"
+  4. "Use TodoWrite tool to track progress"
+  5. "Update status in real-time"

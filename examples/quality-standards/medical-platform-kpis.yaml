@@ -1,0 +1,186 @@
+# Medical Platform Specific KPIs and Standards
+# Based on PLANNING.md Lines 244-259 (医疗平台特定KPI)
+
+medical_platform_kpis:
+  version: "v6.0"
+  last_updated: "2025-01-17"
+  scope: "B2B2C中医处方履约平台"
+
+# 合规性KPI
+compliance_kpis:
+  hipaa_compliance_rate:
+    metric: "HIPAA合规检查通过率"
+    target: "100%"
+    reasoning: "医疗平台法规要求"
+    measurement: "合规检查项目通过数量 / 总检查项目数量"
+    frequency: "每个Phase完成时"
+    
+  fda_prescription_compliance:
+    metric: "FDA处方规范合规率"
+    target: "100%"
+    reasoning: "处方管理法规要求"
+    measurement: "符合FDA规范的处方数量 / 总处方数量"
+    frequency: "实时监控"
+    
+  patient_data_leakage:
+    metric: "患者数据泄露事件"
+    target: "0"
+    reasoning: "隐私保护核心要求"
+    measurement: "数据泄露事件数量 (任何级别)"
+    frequency: "持续监控"
+
+# 业务质量KPI
+business_quality_kpis:
+  prescription_data_integrity:
+    metric: "处方数据完整性"
+    target: "99.9%"
+    reasoning: "医疗数据准确性要求"
+    measurement: "完整准确的处方记录 / 总处方记录"
+    validation: "每日数据完整性检查"
+    
+  drug_interaction_coverage:
+    metric: "药物相互作用检查覆盖率"
+    target: "100%"
+    reasoning: "患者安全保障"
+    measurement: "已检查药物相互作用的处方 / 总处方"
+    automation: "自动化检查系统"
+    
+  audit_trail_completeness:
+    metric: "审计追踪完整性"
+    target: "100%"
+    reasoning: "合规和安全要求"
+    measurement: "有完整审计记录的操作 / 总关键操作"
+    coverage:
+      - "用户认证事件"
+      - "处方创建和修改"
+      - "支付和财务操作"
+      - "系统配置变更"
+
+# 开发效率KPI
+development_efficiency_kpis:
+  three_plus_one_reuse_rate:
+    metric: "3+1步骤流程复用率"
+    target: "≥ 90%"
+    reasoning: "标准化和效率提升"
+    measurement: "使用标准3+1流程的任务 / 总任务数量"
+    benefits: "减少学习成本，提升开发一致性"
+    
+  lightweight_validation_pass_rate:
+    metric: "轻量级验证通过率"
+    target: "≥ 85%"
+    reasoning: "质量保障和敏捷平衡"
+    measurement: "首次通过轻量级验证的Phase / 总Phase数量"
+    optimization: "持续改进验证流程"
+    
+  ai_agent_estimation_accuracy:
+    metric: "AI Agent估算准确率"
+    target: "≥ 80%"
+    reasoning: "项目管理和资源规划"
+    measurement: "准确估算的任务 / 总估算任务"
+    dimensions:
+      - "步骤数量准确性"
+      - "代码文件数量准确性"
+      - "迭代轮次准确性"
+      - "复杂度评估准确性"
+
+# 医疗平台特定性能指标
+medical_platform_performance:
+  prescription_processing_time:
+    metric: "处方处理时间"
+    target: "P95 < 500ms"
+    reasoning: "医疗服务实时性要求"
+    measurement: "从处方提交到确认的处理时间"
+    
+  real_time_notification_latency:
+    metric: "实时通知延迟"
+    target: "< 2s"
+    reasoning: "医疗业务时效性"
+    measurement: "状态变更到通知送达的时间"
+    scope: "处方状态、订单状态、支付状态"
+    
+  system_availability:
+    metric: "系统可用性"
+    target: "99.9%"
+    reasoning: "医疗服务连续性要求"
+    measurement: "月度系统正常运行时间 / 总时间"
+    downtime_limit: "8.7小时/年"
+
+# 安全性特定指标
+security_specific_kpis:
+  authentication_failure_rate:
+    metric: "认证失败率"
+    target: "< 0.1%"
+    reasoning: "系统安全性保障"
+    measurement: "认证失败次数 / 总认证尝试次数"
+    threshold: "异常模式检测和告警"
+    
+  unauthorized_access_attempts:
+    metric: "未授权访问尝试"
+    target: "0 successful attempts"
+    reasoning: "数据安全保护"
+    measurement: "成功的未授权访问次数"
+    monitoring: "实时监控和自动阻断"
+    
+  data_encryption_coverage:
+    metric: "数据加密覆盖率"
+    target: "100%"
+    reasoning: "HIPAA合规要求"
+    scope:
+      - "静态数据加密"
+      - "传输数据加密"
+      - "备份数据加密"
+      - "日志数据加密"
+
+# 业务连续性指标
+business_continuity_kpis:
+  disaster_recovery_time:
+    metric: "灾难恢复时间"
+    target: "< 4 hours RTO"
+    reasoning: "医疗服务连续性"
+    measurement: "从故障发生到服务完全恢复的时间"
+    
+  data_backup_success_rate:
+    metric: "数据备份成功率"
+    target: "100%"
+    reasoning: "数据保护和恢复能力"
+    measurement: "成功备份次数 / 总备份计划次数"
+    frequency: "每日备份验证"
+    
+  backup_recovery_test:
+    metric: "备份恢复测试"
+    target: "100% success"
+    reasoning: "确保备份可用性"
+    frequency: "季度恢复测试"
+    scope: "关键数据和系统配置"
+
+# 监控和报告
+monitoring_and_reporting:
+  real_time_dashboards:
+    medical_compliance: "HIPAA/FDA合规状态实时监控"
+    security_metrics: "安全指标和威胁检测"
+    business_performance: "处方处理和业务指标"
+    system_health: "系统性能和可用性"
+    
+  alerting_thresholds:
+    critical: "合规违规、安全威胁、系统故障"
+    warning: "性能下降、备份失败、异常模式"
+    info: "趋势分析、容量规划、优化建议"
+    
+  reporting_schedule:
+    daily: "合规状态、安全事件、性能指标"
+    weekly: "业务趋势、质量分析、容量使用"
+    monthly: "综合报告、改进建议、风险评估"
+    quarterly: "年度审计准备、战略分析、KPI回顾"
+
+# 持续改进
+continuous_improvement:
+  kpi_review_cycle: "Monthly KPI effectiveness review"
+  threshold_adjustment: "Quarterly based on actual performance"
+  benchmark_updates: "Semi-annually against industry standards"
+  compliance_updates: "Immediate upon regulation changes"
+  
+  improvement_targets:
+    compliance: "Maintain 100% compliance rate"
+    security: "Zero tolerance for security incidents"
+    performance: "5% improvement in processing speed per quarter"
+    quality: "2% improvement in error rate per quarter"

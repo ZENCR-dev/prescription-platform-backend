@@ -1,0 +1,96 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(npm:*)",
+      "Bash(supabase:*)",
+      "Bash(git:*)",
+      "Read(**/prescription-platform-backend/**)",
+      "Write(**/prescription-platform-backend/**)",
+      "Edit(**/prescription-platform-backend/**)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(rg:*)"
+    ],
+    "deny": [
+      "Read(**/.env*)",
+      "Write(**/.env*)",
+      "Edit(**/.env*)",
+      "Bash(rm:*)",
+      "Bash(delete:*)"
+    ]
+  },
+  "tools": {
+    "bash": {
+      "enabled": true,
+      "timeout": 120000,
+      "workingDirectory": "/Users/renjie/dev/prescription-platform-backend"
+    },
+    "read": {
+      "enabled": true,
+      "maxFileSize": "10MB"
+    },
+    "write": {
+      "enabled": true,
+      "allowedPaths": [
+        "/Users/renjie/dev/prescription-platform-backend/**",
+        "!**/node_modules/**",
+        "!**/.git/**",
+        "!**/dist/**",
+        "!**/build/**"
+      ]
+    },
+    "edit": {
+      "enabled": true,
+      "allowedPaths": [
+        "/Users/renjie/dev/prescription-platform-backend/**",
+        "!**/node_modules/**",
+        "!**/.git/**"
+      ]
+    }
+  },
+  "project": {
+    "name": "B2B2C Prescription Platform",
+    "type": "fullstack",
+    "framework": "next.js",
+    "database": "supabase",
+    "deployment": "vercel"
+  },
+  "development": {
+    "testCommand": "npm run test",
+    "buildCommand": "npm run build",
+    "lintCommand": "npm run lint",
+    "typeCheckCommand": "npm run type-check",
+    "devCommand": "npm run dev"
+  },
+  "security": {
+    "allowFileCreation": true,
+    "allowFileModification": true,
+    "allowDirectoryCreation": true,
+    "restrictedPaths": [
+      ".env",
+      ".env.local",
+      "node_modules",
+      ".git"
+    ]
+  },
+  "supabase": {
+    "enabled": true,
+    "projectId": "${SUPABASE_PROJECT_ID}",
+    "localDevelopment": true,
+    "typesGeneration": "supabase gen types typescript",
+    "migrationPath": "supabase/migrations"
+  },
+  "context": {
+    "maxTokens": 500000,
+    "preserveContext": true,
+    "autoLoadFiles": [
+      "CLAUDE.md",
+      "INITIAL.md",
+      "package.json",
+      "types/database.types.ts"
+    ]
+  }
+}

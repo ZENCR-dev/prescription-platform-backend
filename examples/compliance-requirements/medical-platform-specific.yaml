@@ -1,0 +1,116 @@
+# Medical Platform Specific Requirements
+# Based on PLANNING.md Lines 165-179 (医疗平台特定合规要求)
+
+medical_platform_requirements:
+  version: "v6.0"
+  last_updated: "2025-01-17"
+  scope: "B2B2C中医处方履约平台"
+
+# HIPAA合规要求
+hipaa_compliance:
+  applicable_scope:
+    data_types:
+      - "处方数据 (prescription data)"
+      - "医师信息 (practitioner information)"
+      - "支付记录 (payment records)"
+    exclusions:
+      - "患者个人信息 (explicitly excluded)"
+      - "个人身份标识 (PII not collected)"
+      
+  basic_requirements:
+    data_encryption:
+      at_rest: "AES-256 encryption for all medical data"
+      in_transit: "TLS 1.3 for all data transmission"
+      backup: "Encrypted backup with separate key management"
+      
+    access_logging:
+      coverage: "All medical data access events"
+      retention: "7 years minimum retention period"
+      format: "Structured audit logs with user attribution"
+      
+    minimum_necessary:
+      principle: "Only collect and process minimum required data"
+      implementation: "RLS policies enforce data access limits"
+      review: "Quarterly access pattern review"
+
+# 处方安全要求
+prescription_security:
+  applicable_scope:
+    functions:
+      - "prescription_flow"
+      - "medication_management"
+      - "prescriber_verification"
+      
+  basic_requirements:
+    data_integrity:
+      validation: "Multi-layer prescription data validation"
+      checksums: "Cryptographic integrity verification"
+      audit_trail: "Complete prescription lifecycle tracking"
+      
+    drug_interaction:
+      coverage: "Comprehensive drug interaction database"
+      automation: "Real-time interaction checking"
+      override: "Licensed prescriber override with justification"
+      
+    access_control:
+      prescriber_only: "Only licensed prescribers can create prescriptions"
+      pharmacy_limited: "Pharmacies access only assigned prescriptions"
+      admin_oversight: "Administrative oversight with full audit"
+
+# FDA合规要求
+fda_compliance:
+  applicable_scope:
+    functions:
+      - "prescription_creation"
+      - "medication_database"
+      - "prescriber_licensing"
+      
+  basic_requirements:
+    prescription_standards:
+      format: "FDA-compliant prescription format"
+      required_fields: "All mandatory prescription elements"
+      validation: "Automated compliance checking"
+      
+    medication_data:
+      database: "FDA-approved medication database"
+      updates: "Regular medication data synchronization"
+      classification: "Proper drug classification and scheduling"
+      
+    audit_compliance:
+      procedures: "FDA-compliant audit procedures"
+      reporting: "Regulatory reporting capabilities"
+      documentation: "Complete compliance documentation"
+
+# 实施指导
+implementation_guidance:
+  architecture_integration:
+    supabase_rls: "Leverage RLS for access control compliance"
+    edge_functions: "Use Edge Functions for compliance logic"
+    audit_tables: "Dedicated audit tables for compliance tracking"
+    
+  development_workflow:
+    compliance_review: "Mandatory compliance review for medical features"
+    automated_testing: "Automated compliance testing in CI/CD"
+    documentation: "Complete compliance documentation requirements"
+    
+  operational_requirements:
+    monitoring: "Real-time compliance monitoring and alerting"
+    incident_response: "Compliance incident response procedures"
+    training: "Team compliance training and certification"
+
+# 风险管理
+risk_management:
+  compliance_risks:
+    regulation_changes: "Monitor and adapt to regulation changes"
+    audit_failures: "Proactive compliance gap identification"
+    data_breaches: "Multi-layer breach prevention and response"
+    
+  mitigation_strategies:
+    version_control: "Version-controlled compliance requirements"
+    automated_monitoring: "Automated compliance monitoring systems"
+    expert_consultation: "Regular legal and medical expert consultation"
+    
+  emergency_procedures:
+    compliance_violations: "Immediate violation response procedures"
+    data_incidents: "HIPAA breach notification procedures"
+    regulatory_inquiries: "Structured regulatory response protocols"

@@ -1,0 +1,184 @@
+# Technical Quality Standards and KPIs
+# Based on PLANNING.md Lines 227-241 (技术门槛)
+
+technical_standards:
+  version: "v6.0"
+  last_updated: "2025-01-17"
+  
+# 性能标准
+performance_standards:
+  api_response_time:
+    metric: "API响应时间"
+    target: "P95 < 200ms"
+    reasoning: "医疗实时性要求"
+    measurement: "95th percentile response time"
+    monitoring: "Continuous performance monitoring"
+    
+  validation_speed:
+    metric: "轻量级验证时间"
+    target: "< 5分钟"
+    reasoning: "敏捷开发效率要求"
+    measurement: "Total validation pipeline execution time"
+    monitoring: "CI/CD pipeline metrics"
+
+# 质量标准
+quality_standards:
+  test_coverage:
+    unit_tests:
+      metric: "单元测试覆盖率"
+      target: "≥ 80%"
+      reasoning: "基础质量保障"
+      measurement: "Line and branch coverage"
+      
+    critical_medical_business:
+      metric: "核心医疗业务覆盖率"
+      target: "100%"
+      reasoning: "医疗安全要求"
+      scope: "处方管理、患者数据、支付流程"
+      measurement: "Critical path coverage"
+      
+  security_baseline:
+    owasp_compliance:
+      metric: "OWASP安全检查"
+      target: "通过"
+      reasoning: "基础安全要求"
+      tools: ["OWASP ZAP", "Security linting"]
+      
+    hipaa_compliance:
+      metric: "HIPAA合规检查"
+      target: "通过"
+      reasoning: "医疗平台法规要求"
+      scope: "数据保护、访问控制、审计"
+      
+  code_quality:
+    metric: "基础质量检查"
+    target: "通过"
+    components:
+      - "ESLint规则检查"
+      - "TypeScript类型检查"
+      - "代码格式化标准"
+      - "依赖安全检查"
+
+# AI Agent效率标准
+ai_agent_efficiency_standards:
+  estimation_accuracy:
+    metric: "估算准确性"
+    target: "≥ 80%"
+    dimensions:
+      - "步骤数量预测准确性"
+      - "代码文件数量预测准确性"
+      - "迭代轮次预测准确性"
+      - "复杂度评估准确性"
+    measurement: "实际值与预估值的偏差率"
+    
+  iteration_control:
+    metric: "迭代轮次控制"
+    target: "实际轮次不超过预估+1"
+    reasoning: "开发效率和资源控制"
+    measurement: "实际迭代次数 vs 预估迭代次数"
+    
+  validation_pass_rate:
+    metric: "基础验证通过率"
+    target: "≥ 90%"
+    reasoning: "质量保障和开发效率"
+    measurement: "首次验证通过率"
+
+# 开发过程质量指标
+development_process_kpis:
+  three_plus_one_reuse_rate:
+    metric: "3+1步骤流程复用率"
+    target: "≥ 90%"
+    reasoning: "标准化和效率提升"
+    measurement: "使用标准流程的任务比例"
+    
+  lightweight_validation_pass_rate:
+    metric: "轻量级验证通过率"
+    target: "≥ 85%"
+    reasoning: "质量保障和敏捷平衡"
+    measurement: "轻量级验证首次通过率"
+    
+  agent_estimation_accuracy:
+    metric: "AI Agent估算准确率"
+    target: "≥ 80%"
+    reasoning: "项目管理和资源规划"
+    measurement: "多维度估算的平均准确性"
+
+# 性能监控指标
+performance_monitoring:
+  database_performance:
+    query_response_time:
+      target: "P95 < 100ms"
+      scope: "基础CRUD操作"
+    connection_pool:
+      target: "利用率 < 80%"
+      reasoning: "避免连接瓶颈"
+      
+  api_gateway_performance:
+    throughput:
+      target: "≥ 1000 requests/second"
+      scope: "标准API端点"
+    error_rate:
+      target: "< 0.1%"
+      scope: "非4xx错误"
+      
+  frontend_performance:
+    page_load_time:
+      target: "< 3s"
+      measurement: "Time to Interactive (TTI)"
+    core_web_vitals:
+      lcp: "< 2.5s"  # Largest Contentful Paint
+      fid: "< 100ms" # First Input Delay
+      cls: "< 0.1"   # Cumulative Layout Shift
+
+# 质量门槛阈值
+quality_thresholds:
+  blocking_issues:
+    security_vulnerabilities:
+      high_severity: 0
+      medium_severity: 2
+      low_severity: 10
+      
+    test_failures:
+      unit_tests: 0
+      integration_tests: 0
+      e2e_tests: 1  # 允许1个非关键路径失败
+      
+    performance_degradation:
+      api_response_time_increase: "20%"
+      database_query_time_increase: "30%"
+      
+  warning_thresholds:
+    code_coverage_drop: "5%"
+    dependency_updates: "30 days"
+    documentation_staleness: "14 days"
+
+# 监控和报告
+monitoring_and_reporting:
+  automated_monitoring:
+    frequency: "Continuous"
+    tools:
+      - "Supabase Analytics"
+      - "Vercel Analytics"
+      - "Custom monitoring dashboard"
+      
+  reporting_schedule:
+    daily: "Performance metrics, error rates"
+    weekly: "Quality trends, technical debt"
+    monthly: "Comprehensive quality review"
+    
+  alerting_rules:
+    critical: "Immediate notification (< 5 minutes)"
+    warning: "Daily summary report"
+    info: "Weekly trend analysis"
+
+# 持续改进
+continuous_improvement:
+  metric_review_cycle: "Monthly"
+  threshold_adjustment: "Quarterly"
+  tool_evaluation: "Semi-annually"
+  process_optimization: "Based on data insights"
+  
+  improvement_targets:
+    performance: "5% improvement per quarter"
+    quality: "2% improvement per quarter"  
+    efficiency: "10% improvement per quarter"

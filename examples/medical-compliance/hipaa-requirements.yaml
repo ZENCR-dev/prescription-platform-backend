@@ -1,0 +1,235 @@
+# HIPAA Compliance Requirements for Medical Platform
+# Based on PLANNING.md Lines 187-198 and medical platform requirements
+
+hipaa_compliance:
+  version: "2025-01-17"
+  scope: "B2B2C中医处方履约平台"
+  regulation: "Health Insurance Portability and Accountability Act (HIPAA)"
+
+# 适用范围定义
+applicable_scope:
+  data_types:
+    - "处方数据 (prescription data)"
+    - "医师信息 (practitioner information)"
+    - "药房履约数据 (pharmacy fulfillment data)"
+    - "审计日志 (audit logs)"
+  
+  excluded_data:
+    - "患者个人身份信息 (Patient PII) - 系统设计不收集"
+    - "患者健康记录 (Patient health records)"
+    - "直接患者通信数据"
+  
+  functions_covered:
+    - "处方创建和管理"
+    - "医师认证和授权"
+    - "药房数据处理"
+    - "支付和财务记录"
+    - "系统审计和监控"
+
+# 基础HIPAA要求
+basic_requirements:
+  data_encryption:
+    at_rest:
+      requirement: "Encrypt all sensitive data at rest"
+      implementation: "AES-256 encryption for database storage"
+      verification: "Database encryption settings audit"
+      
+    in_transit:
+      requirement: "Encrypt all data transmissions"
+      implementation: "TLS 1.3 for all API communications"
+      verification: "SSL/TLS configuration audit"
+      
+    in_processing:
+      requirement: "Secure data processing"
+      implementation: "Encrypted processing in Edge Functions"
+      verification: "Processing environment security audit"
+
+  access_controls:
+    authentication:
+      requirement: "Strong authentication mechanisms"
+      implementation: "Multi-factor authentication for practitioners"
+      verification: "Authentication strength testing"
+      
+    authorization:
+      requirement: "Role-based access control"
+      implementation: "Supabase RLS policies for data isolation"
+      verification: "Access control testing and audit"
+      
+    principle_of_least_privilege:
+      requirement: "Minimum necessary access"
+      implementation: "Granular permissions based on user role"
+      verification: "Permission audit and testing"
+
+  audit_logging:
+    requirement: "Comprehensive audit trails"
+    implementation: "Automatic logging of all data access and modifications"
+    coverage:
+      - "User authentication events"
+      - "Data access and modification"
+      - "Administrative actions"
+      - "System configuration changes"
+      - "Error and security events"
+    verification: "Audit log completeness and integrity checks"
+
+# 技术实施要求
+technical_implementation:
+  database_security:
+    row_level_security:
+      requirement: "Data isolation between users"
+      implementation: "RLS policies for each data table"
+      verification: "Cross-user data access prevention testing"
+      
+    backup_encryption:
+      requirement: "Encrypted database backups"
+      implementation: "Automated encrypted backups"
+      retention: "6 years as per medical requirements"
+      
+    connection_security:
+      requirement: "Secure database connections"
+      implementation: "SSL-only connections with certificate validation"
+
+  application_security:
+    session_management:
+      requirement: "Secure session handling"
+      implementation: "JWT tokens with short expiration"
+      features:
+        - "Automatic session timeout"
+        - "Secure session storage"
+        - "Session invalidation on logout"
+        
+    input_validation:
+      requirement: "Comprehensive input validation"
+      implementation: "Schema-based validation with sanitization"
+      coverage: "All user inputs and API parameters"
+      
+    error_handling:
+      requirement: "Secure error messages"
+      implementation: "Generic error messages to prevent information disclosure"
+
+  infrastructure_security:
+    network_security:
+      requirement: "Secure network configuration"
+      implementation: "VPC with private subnets and security groups"
+      
+    monitoring:
+      requirement: "Continuous security monitoring"
+      implementation: "Real-time monitoring and alerting"
+      coverage:
+        - "Unauthorized access attempts"
+        - "Data access patterns"
+        - "System performance anomalies"
+        - "Security policy violations"
+
+# 业务流程合规
+business_process_compliance:
+  data_minimization:
+    principle: "Collect and process only necessary data"
+    implementation:
+      - "No collection of patient personal identifiers"
+      - "Prescription data limited to medical necessity"
+      - "Automatic data purging for expired records"
+      
+  notice_and_consent:
+    requirement: "Clear privacy notices"
+    implementation:
+      - "Privacy policy clearly stating data usage"
+      - "Practitioner and pharmacy consent processes"
+      - "Data sharing agreements with partners"
+      
+  individual_rights:
+    access_rights:
+      requirement: "Right to access personal data"
+      implementation: "User dashboard for data access"
+      
+    correction_rights:
+      requirement: "Right to correct inaccurate data"
+      implementation: "Self-service data correction interface"
+      
+    deletion_rights:
+      requirement: "Right to data deletion"
+      implementation: "Account deletion with data purging"
+
+# 合规验证检查清单
+compliance_checklist:
+  technical_controls:
+    - name: "数据加密验证"
+      check: "Verify encryption at rest, in transit, and in processing"
+      frequency: "Monthly"
+      
+    - name: "访问控制审计"
+      check: "Audit user access permissions and RLS policies"
+      frequency: "Quarterly"
+      
+    - name: "审计日志完整性"
+      check: "Verify audit log completeness and integrity"
+      frequency: "Weekly"
+      
+    - name: "安全漏洞扫描"
+      check: "Automated security vulnerability scanning"
+      frequency: "Weekly"
+
+  administrative_controls:
+    - name: "员工培训记录"
+      check: "HIPAA training completion for all team members"
+      frequency: "Annually"
+      
+    - name: "事件响应测试"
+      check: "Security incident response procedure testing"
+      frequency: "Quarterly"
+      
+    - name: "合规文档更新"
+      check: "Review and update compliance documentation"
+      frequency: "Semi-annually"
+
+  physical_controls:
+    - name: "云基础设施审计"
+      check: "Review cloud provider security certifications"
+      frequency: "Annually"
+      
+    - name: "备份恢复测试"
+      check: "Test backup and recovery procedures"
+      frequency: "Quarterly"
+
+# 违规事件响应
+incident_response:
+  detection:
+    monitoring: "24/7 automated monitoring"
+    reporting: "Immediate alert system"
+    
+  response_timeline:
+    immediate: "< 1 hour - Incident containment"
+    short_term: "< 24 hours - Impact assessment and notification"
+    medium_term: "< 72 hours - Detailed investigation and reporting"
+    
+  notification_requirements:
+    affected_individuals: "Within 60 days of discovery"
+    hhs_ocr: "Within 60 days of discovery (if >500 individuals)"
+    business_associates: "Immediately upon discovery"
+
+# 合规评估和改进
+compliance_assessment:
+  self_assessment:
+    frequency: "Quarterly"
+    scope: "All technical and administrative controls"
+    
+  third_party_audit:
+    frequency: "Annually"
+    scope: "Comprehensive HIPAA compliance review"
+    
+  continuous_improvement:
+    process: "Monthly review of compliance metrics"
+    updates: "Immediate implementation of required changes"
+    training: "Ongoing team education and updates"
+
+# 文档和记录保留
+documentation_retention:
+  audit_logs: "6 years"
+  compliance_documentation: "6 years"
+  incident_reports: "6 years"
+  training_records: "3 years"
+  
+  storage_requirements:
+    encryption: "AES-256 encryption"
+    access_control: "Role-based access"
+    backup: "Encrypted offsite backup"
+    disposal: "Secure data destruction when expired"

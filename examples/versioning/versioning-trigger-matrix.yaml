@@ -1,0 +1,226 @@
+# PRP版本化触发条件评估矩阵
+# 用于决定何时创建新PRP版本 vs 更新现有PRP
+
+version: "1.0"
+description: "评估变更是否需要创建新PRP版本的决策矩阵"
+
+# 核心评估维度
+evaluation_dimensions:
+  impact_scope:
+    description: "变更影响范围"
+    levels:
+      1: "单一原子任务内部调整"
+      2: "单一Phase内多个原子任务"
+      3: "跨Phase影响"
+      4: "跨TASK影响"
+      5: "系统级架构影响"
+    
+  change_magnitude:
+    description: "变更幅度"
+    levels:
+      1: "微调参数或配置"
+      2: "功能增强或优化"
+      3: "功能重构或重新设计"
+      4: "核心逻辑变更"
+      5: "架构级别变更"
+      
+  requirements_source:
+    description: "需求变更来源"
+    levels:
+      1: "开发过程中的技术优化"
+      2: "Phase验证发现的问题"
+      3: "业务需求澄清或调整"
+      4: "INITIAL.md底本需求变更"
+      5: "外部合规要求变更"
+      
+  api_impact:
+    description: "API接口影响"
+    levels:
+      1: "无API变更"
+      2: "新增非破坏性API"
+      3: "现有API增强(向后兼容)"
+      4: "API重大修改(部分不兼容)"
+      5: "API重构或废弃"
+      
+  database_impact:
+    description: "数据库影响"
+    levels:
+      1: "无数据库变更"
+      2: "新增表或字段"
+      3: "现有字段修改(兼容)"
+      4: "表结构重构"
+      5: "数据库架构变更"
+      
+  compliance_impact:
+    description: "医疗合规影响"
+    levels:
+      1: "无合规影响"
+      2: "合规流程优化"
+      3: "新增合规要求"
+      4: "合规策略调整"
+      5: "合规框架变更"
+
+# 决策规则矩阵
+decision_rules:
+  mandatory_versioning:
+    description: "必须创建新版本的情况"
+    conditions:
+      - requirements_source: 4 # INITIAL.md底本变更
+      - requirements_source: 5 # 外部合规要求变更
+      - impact_scope: 5        # 系统级架构影响
+      - api_impact: 5          # API重构或废弃
+      - database_impact: 5     # 数据库架构变更
+      - compliance_impact: 5   # 合规框架变更
+    action: "MUST_VERSION"
+    reason: "影响项目基础或合规框架，必须版本化追溯"
+    
+  high_priority_versioning:
+    description: "强烈建议版本化的情况"
+    conditions:
+      # 高影响范围 + 高变更幅度
+      - AND:
+        - impact_scope: [4, 5]
+        - change_magnitude: [4, 5]
+      # 跨系统影响 + API重大变更
+      - AND:
+        - impact_scope: [4, 5] 
+        - api_impact: [4, 5]
+      # 数据库重构 + 合规影响
+      - AND:
+        - database_impact: [4, 5]
+        - compliance_impact: [3, 4, 5]
+      # INITIAL.md需求澄清 + 跨Phase影响
+      - AND:
+        - requirements_source: [3, 4]
+        - impact_scope: [3, 4, 5]
+    action: "SHOULD_VERSION"
+    reason: "影响范围较大，建议版本化便于管理和回滚"
+    
+  conditional_versioning:
+    description: "根据具体情况考虑版本化"
+    conditions:
+      # 中等影响 + 中等变更
+      - AND:
+        - impact_scope: [2, 3]
+        - change_magnitude: [2, 3]
+        - OR:
+          - api_impact: [2, 3]
+          - database_impact: [2, 3]
+          - compliance_impact: [2, 3]
+      # 单一TASK内但影响多个Phase
+      - AND:
+        - impact_scope: [2, 3]
+        - change_magnitude: [3, 4]
+    action: "CONSIDER_VERSION"
+    reason: "根据团队容量和项目进度综合判断"
+    
+  no_versioning:
+    description: "无需版本化的情况"
+    conditions:
+      # 轻微调整
+      - AND:
+        - impact_scope: [1, 2]
+        - change_magnitude: [1, 2]
+        - api_impact: [1, 2]
+        - database_impact: [1, 2]
+        - compliance_impact: [1, 2]
+    action: "UPDATE_CURRENT"
+    reason: "影响范围小，直接更新当前PRP即可"
+
+# 特殊情况处理
+special_cases:
+  urgent_hotfix:
+    description: "紧急热修复"
+    trigger: "生产环境紧急问题修复"
+    action: "UPDATE_CURRENT_WITH_ANNOTATION"
+    annotation_format: "## 🚨 紧急修复记录\n**日期**: YYYY-MM-DD\n**问题**: 问题描述\n**修复**: 修复方案\n**影响**: 影响评估"
+    
+  medical_compliance_emergency:
+    description: "医疗合规紧急要求"
+    trigger: "HIPAA/FDA紧急合规要求"
+    action: "IMMEDIATE_VERSION"
+    priority: "CRITICAL"
+    workflow: "跳过常规评估，立即创建新版本"
+    
+  parallel_development:
+    description: "并行开发需求"
+    trigger: "需要同时维护多个版本"
+    action: "BRANCH_VERSION"
+    strategy: "创建分支版本，支持并行开发"
+
+# 评估工具
+evaluation_tool:
+  scoring_algorithm:
+    description: "自动评分算法"
+    formula: |
+      score = (impact_scope × 0.3) + (change_magnitude × 0.25) + 
+              (requirements_source × 0.2) + (api_impact × 0.15) + 
+              (database_impact × 0.05) + (compliance_impact × 0.05)
+    
+    thresholds:
+      must_version: 4.0      # 必须版本化
+      should_version: 3.0    # 强烈建议版本化  
+      consider_version: 2.0  # 考虑版本化
+      no_version: 1.9        # 无需版本化
+      
+  decision_workflow:
+    step_1: "评估各维度得分"
+    step_2: "计算综合评分"  
+    step_3: "检查特殊情况"
+    step_4: "确定版本化策略"
+    step_5: "记录决策依据"
+
+# 使用示例
+usage_examples:
+  example_1:
+    scenario: "TASK01需要集成额外的认证系统"
+    evaluation:
+      impact_scope: 3        # 跨Phase影响
+      change_magnitude: 3    # 功能重构
+      requirements_source: 3 # 业务需求调整
+      api_impact: 3         # API增强
+      database_impact: 2    # 新增表
+      compliance_impact: 3  # 新增合规要求
+    score: 2.85
+    decision: "SHOULD_VERSION"
+    rationale: "影响范围较大，涉及认证架构调整"
+    
+  example_2:
+    scenario: "优化数据库查询性能"
+    evaluation:
+      impact_scope: 1        # 单一任务内部
+      change_magnitude: 2    # 功能优化
+      requirements_source: 1 # 技术优化
+      api_impact: 1         # 无API变更
+      database_impact: 2    # 优化查询
+      compliance_impact: 1  # 无合规影响
+    score: 1.35
+    decision: "UPDATE_CURRENT"
+    rationale: "内部优化，影响范围小"
+    
+  example_3:
+    scenario: "FDA要求新增药物追溯功能"
+    evaluation:
+      impact_scope: 4        # 跨TASK影响
+      change_magnitude: 4    # 核心逻辑变更
+      requirements_source: 5 # 外部合规要求
+      api_impact: 4         # API重大修改
+      database_impact: 4    # 表结构重构
+      compliance_impact: 5  # 合规框架变更
+    score: 4.25
+    decision: "MUST_VERSION"
+    rationale: "外部合规强制要求，系统级影响"
+
+# 质量检查清单
+quality_checklist:
+  evaluation_completeness:
+    - [ ] "所有6个维度都已评估"
+    - [ ] "评分依据清晰可追溯"
+    - [ ] "特殊情况已检查"
+    - [ ] "决策依据已记录"
+    
+  stakeholder_approval:
+    - [ ] "architect persona技术评估"
+    - [ ] "业务负责人需求确认"
+    - [ ] "医疗合规专家审核(如适用)"
+    - [ ] "项目经理时间线确认"

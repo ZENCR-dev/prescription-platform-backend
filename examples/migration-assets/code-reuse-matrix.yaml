@@ -1,0 +1,217 @@
+# Code Reuse Matrix - 87.5% Asset Migration Strategy
+# Based on PLANNING.md Lines 137-145 (核心服务迁移矩阵)
+
+code_reuse_strategy:
+  version: "v6.0"
+  last_updated: "2025-01-17"
+  overall_reuse_rate: "87.5%"
+  total_loc_available: "~43,750 LOC"
+  estimated_savings: "6-8个月开发工作量"
+
+# 核心服务迁移矩阵
+core_service_migration:
+  qr_code_management:
+    service_name: "QR码生成/药品管理"
+    reuse_rate: "95%"
+    value_contribution: "防篡改保护，多维搜索算法"
+    migration_effort: "最小配置调整"
+    files:
+      - "qr-generator.service.ts"
+      - "medicine-search.service.ts"
+      - "anti-tamper.utils.ts"
+    adaptation_required:
+      - "集成Supabase Storage存储QR码"
+      - "适配PostgreSQL全文搜索"
+    
+  prescription_calculator:
+    service_name: "处方计算引擎"
+    reuse_rate: "90%"
+    value_contribution: "价格计算，业务规则验证"
+    migration_effort: "适配调整，保留核心逻辑"
+    files:
+      - "prescription-calculator.service.ts"
+      - "pricing-rules.engine.ts"
+      - "business-validation.service.ts"
+    adaptation_required:
+      - "适配NZD cents精确计算"
+      - "集成Supabase Edge Functions"
+      - "Decimal.js计算库集成"
+    
+  stripe_payment_integration:
+    service_name: "Stripe支付集成"
+    reuse_rate: "85%"
+    value_contribution: "幂等性保护，状态同步"
+    migration_effort: "需要重构改造，参考设计模式"
+    files:
+      - "stripe-payment.service.ts"
+      - "payment-webhook.handler.ts"
+      - "payment-state-sync.service.ts"
+    adaptation_required:
+      - "适配Supabase Auth用户系统"
+      - "集成Edge Functions Webhook处理"
+      - "PostgreSQL事务管理"
+    
+  audit_logging:
+    service_name: "审计日志/处方服务"
+    reuse_rate: "75%"
+    value_contribution: "合规追踪，状态机控制"
+    migration_effort: "需要重构改造，参考设计模式"
+    files:
+      - "audit-logger.service.ts"
+      - "prescription-state-machine.ts"
+      - "compliance-tracker.service.ts"
+    adaptation_required:
+      - "适配Supabase日志表结构"
+      - "集成RLS权限控制"
+      - "HIPAA合规日志格式"
+
+# 质量保障矩阵
+quality_assurance_matrix:
+  production_validated:
+    description: "生产环境验证的业务逻辑"
+    coverage: "~43,750 LOC"
+    test_coverage: ">85%"
+    performance_tested: "真实负载验证"
+    
+  business_logic_retention:
+    description: "核心业务逻辑保留率"
+    retention_rate: "75%"
+    areas_preserved:
+      - "处方价格计算算法"
+      - "支付状态管理逻辑"
+      - "QR码生成和验证"
+      - "审计日志结构化"
+    
+  architecture_adaptation:
+    description: "架构适配要求"
+    from: "NestJS + Prisma ORM"
+    to: "Supabase Edge Functions + RLS"
+    adaptation_complexity: "中等"
+    key_changes:
+      - "Controller → Edge Functions"
+      - "Prisma ORM → Supabase SQL"
+      - "Guards/Middleware → RLS策略"
+      - "Service层 → 函数式模块"
+
+# 迁移优先级矩阵
+migration_priority_matrix:
+  tier_1_immediate:
+    priority: "立即迁移"
+    reuse_rate: "90-100%"
+    services:
+      - "QR码生成服务"
+      - "处方计算引擎"
+      - "审计日志系统"
+    estimated_time: "1-2周"
+    
+  tier_2_adapted:
+    priority: "适配迁移"
+    reuse_rate: "70-89%"
+    services:
+      - "Stripe支付集成"
+      - "实时通知系统"
+      - "数据同步服务"
+    estimated_time: "3-4周"
+    
+  tier_3_reference:
+    priority: "参考重构"
+    reuse_rate: "50-69%"
+    services:
+      - "用户认证集成"
+      - "权限管理系统"
+      - "文件上传处理"
+    estimated_time: "4-6周"
+
+# 技术债务和风险评估
+technical_debt_assessment:
+  legacy_dependencies:
+    description: "遗留依赖清理"
+    complexity: "中等"
+    time_required: "1-2周"
+    dependencies_to_remove:
+      - "NestJS框架依赖"
+      - "Prisma ORM层"
+      - "Express中间件"
+    
+  data_migration:
+    description: "数据模型迁移"
+    complexity: "低"
+    time_required: "3-5天"
+    schema_changes:
+      - "适配Supabase auth.users表"
+      - "RLS策略字段调整"
+      - "索引和约束迁移"
+    
+  testing_migration:
+    description: "测试用例迁移"
+    complexity: "中等"
+    time_required: "2-3周"
+    test_categories:
+      - "单元测试适配Edge Functions"
+      - "集成测试适配Supabase"
+      - "E2E测试流程更新"
+
+# 性能优化机会
+performance_optimization:
+  database_optimization:
+    opportunity: "RLS策略性能优化"
+    expected_improvement: "20-30%查询性能提升"
+    implementation:
+      - "索引优化策略"
+      - "查询路径优化"
+      - "缓存层集成"
+    
+  edge_functions_optimization:
+    opportunity: "边缘计算优化"
+    expected_improvement: "40-50%响应时间减少"
+    implementation:
+      - "函数冷启动优化"
+      - "资源预配置"
+      - "并发处理优化"
+    
+  real_time_optimization:
+    opportunity: "实时数据同步优化"
+    expected_improvement: "60-70%延迟减少"
+    implementation:
+      - "WebSocket连接池"
+      - "智能订阅管理"
+      - "数据增量同步"
+
+# 迁移成功指标
+migration_success_metrics:
+  code_reuse_achievement:
+    target: "≥85% actual reuse rate"
+    measurement: "成功迁移的LOC / 总可迁移LOC"
+    
+  performance_maintenance:
+    target: "≤10% performance degradation"
+    measurement: "新系统响应时间 vs 原系统基准"
+    
+  feature_parity:
+    target: "100% feature completeness"
+    measurement: "成功迁移的功能数 / 原系统功能总数"
+    
+  quality_preservation:
+    target: "≥90% test coverage maintained"
+    measurement: "迁移后测试覆盖率 / 原系统覆盖率"
+
+# 团队协作和知识传承
+knowledge_transfer:
+  documentation_strategy:
+    approach: "模式导向文档"
+    deliverables:
+      - "迁移模式库"
+      - "最佳实践指南"
+      - "常见问题解决方案"
+    
+  team_training:
+    focus_areas:
+      - "Supabase架构模式"
+      - "Edge Functions开发"
+      - "RLS策略设计"
+      - "性能优化技巧"
+    
+  continuous_improvement:
+    process: "迁移过程中持续优化"
+    feedback_loop: "每周迁移回顾和改进"
+    knowledge_sharing: "团队内部技术分享"

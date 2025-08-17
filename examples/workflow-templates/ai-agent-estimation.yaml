@@ -1,0 +1,115 @@
+# AI Agent Estimation Template - v6.0 Simplified System
+# Source: CLAUDE.md Lines 149-197 (v6.0简化AI Agent估算体系)
+
+estimation_system:
+  version: "v6.0"
+  description: "简化估算维度 (4个直观指标)"
+  
+# Core Estimation Dimensions
+dimensions:
+  steps_count:
+    name: "步骤数量"
+    description: "直接数字计数"
+    range: "3-15步"
+    notes: "预期的3+1步骤循环中具体操作数量"
+    example: "6步 (无需复杂分类)"
+    
+  code_files:
+    name: "代码文件"
+    description: "文件数量预估"
+    range: "1-10个文件"
+    notes: "预期修改或创建的文件数量"
+    example: "3个文件 (无需精确行数)"
+    
+  iteration_rounds:
+    name: "迭代轮次"
+    description: "简单轮次预期"
+    range: "1-3轮"
+    notes: "预期的开发-测试-修复循环次数"
+    example: "2轮 (大多数任务1-2轮)"
+    
+  complexity:
+    name: "复杂度"
+    description: "三级简单标记"
+    levels:
+      low: "独立功能，无复杂依赖"
+      medium: "跨模块集成，适度依赖"
+      high: "系统级影响，复杂依赖"
+    example: "中 (直观易懂)"
+
+# Estimation Template Format
+estimation_template: |
+  AI Agent估算:
+    步骤数量: X步
+    代码文件: X个文件
+    迭代轮次: X轮
+    复杂度: 低/中/高
+
+# Practical Examples
+examples:
+  simple_component:
+    name: "用户登录组件"
+    estimation:
+      steps_count: "4步"
+      code_files: "2个文件"
+      iteration_rounds: "1轮"
+      complexity: "低"
+      
+  medium_api:
+    name: "处方API实现"
+    estimation:
+      steps_count: "8步"
+      code_files: "5个文件"
+      iteration_rounds: "2轮"
+      complexity: "中"
+      
+  complex_system:
+    name: "认证系统重构"
+    estimation:
+      steps_count: "12步"
+      code_files: "8个文件"
+      iteration_rounds: "3轮"
+      complexity: "高"
+
+# Estimation Guidelines
+guidelines:
+  accuracy_target: "≥ 80% (步骤数量、代码文件、迭代轮次、复杂度)"
+  iteration_control: "实际轮次不超过预估+1"
+  validation_rate: "基础验证通过率 ≥ 90%"
+  
+  step_counting_rules:
+    - "Count concrete development actions"
+    - "Include testing and validation steps"
+    - "Consider integration complexity"
+    
+  file_estimation_rules:
+    - "Include new files and modified files"
+    - "Count configuration files if significant"
+    - "Exclude trivial changes"
+    
+  iteration_prediction:
+    - "Factor in unknown requirements"
+    - "Consider integration challenges"
+    - "Account for quality feedback loops"
+    
+  complexity_assessment:
+    low_indicators:
+      - "Single module changes"
+      - "Clear requirements"
+      - "No external dependencies"
+    medium_indicators:
+      - "Cross-module integration"
+      - "Some requirements ambiguity"
+      - "Limited external dependencies"
+    high_indicators:
+      - "System-wide changes"
+      - "Complex business rules"
+      - "Multiple external integrations"
+
+# Usage Instructions
+usage:
+  1. "Analyze task requirements and scope"
+  2. "Apply estimation rules to each dimension"
+  3. "Choose examples closest to current task"
+  4. "Document estimation rationale"
+  5. "Track actual vs. estimated for learning"
