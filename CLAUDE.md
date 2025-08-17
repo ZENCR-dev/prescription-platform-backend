@@ -60,6 +60,65 @@
 
 ## 🏗️ Layer 3: TDD-Todos自主执行协议 {#layer3-execution-protocol}
 
+### 🚨 强制执行前验证 (架构合规性检查)
+
+**⚠️ 违规阻断**: 以下检查未通过时必须停止执行并报错
+
+#### 三层分支管理策略验证
+```bash
+# 1. 验证分支结构存在性
+git branch -a | grep "TASK$(current_task_number)" || exit 1  # Layer 2存在
+git branch -a | grep "$(date +%Y-%m-%d-%H%M)" || exit 1     # Layer 3存在
+
+# 2. 验证当前分支正确性
+current_branch=$(git branch --show-current)
+[[ "$current_branch" == "$(date +%Y-%m-%d-%H%M)" ]] || exit 1  # 必须在日期分支工作
+```
+
+#### 时间戳准确性验证
+```bash
+# 1. 禁用虚构时间，强制使用机器真实时间
+real_time=$(date '+%Y-%m-%d %H:%M:%S')
+log_time_pattern="[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"
+
+# 2. 验证日志文件时间戳合规性
+if [[ -f "PRPs/TASK*_LOG.md" ]]; then
+  grep -E "2025-01-|2025-02-|2025-03-" PRPs/TASK*_LOG.md && {
+    echo "❌ 错误：检测到虚构时间戳，必须使用真实机器时间"
+    exit 1
+  }
+fi
+```
+
+#### 强制时间戳标准化机制
+**Agent必须使用的时间戳生成方法**:
+```bash
+# 标准时间戳函数 (Agent必须调用)
+get_real_timestamp() {
+  date '+%Y-%m-%d %H:%M:%S'
+}
+
+# 日期分支命名函数 (Agent必须调用)
+get_date_branch_name() {
+  date '+%Y-%m-%d-%H%M'
+}
+
+# 验证时间戳真实性 (质量门控调用)
+validate_timestamp_accuracy() {
+  local timestamp="$1"
+  local current_date=$(date '+%Y-%m-%d')
+  
+  # 检查时间戳是否为当前机器日期
+  if [[ "$timestamp" == *"$current_date"* ]]; then
+    echo "✅ 时间戳验证通过: $timestamp"
+    return 0
+  else
+    echo "❌ 时间戳验证失败: $timestamp (当前日期: $current_date)"
+    return 1
+  fi
+}
+```
+
 ### Agent执行触发机制
 
 当AI Agent接到Layer 2任务(来自`PRPs/TASK0X.md`中的atomic task)时，自动启动Layer 3执行协议：
