@@ -61,6 +61,11 @@ jspm_packages/
 .branches
 .temp
 
+# Framework and development directories
+Context-Engineering-Intro/
+drafts/
+.claude/
+
 # Files containing sensitive information (Stripe keys, etc.)
 drafts/16 Aug/PRPs/TASK01.md
 recycle/docs/supabase-migration-guide.md

@@ -67,12 +67,13 @@
 #### 三层分支管理策略验证
 ```bash
 # 1. 验证分支结构存在性
-git branch -a | grep "TASK$(current_task_number)" || exit 1  # Layer 2存在
-git branch -a | grep "$(date +%Y-%m-%d-%H%M)" || exit 1     # Layer 3存在
+current_task=$(echo "$TASK" | grep -o 'TASK[0-9]\+')
+git branch -a | grep "$current_task" || exit 1              # Layer 2存在
+git branch -a | grep "$current_task-atomic-" || exit 1      # Layer 3存在
 
 # 2. 验证当前分支正确性
 current_branch=$(git branch --show-current)
-[[ "$current_branch" == "$(date +%Y-%m-%d-%H%M)" ]] || exit 1  # 必须在日期分支工作
+[[ "$current_branch" =~ ^TASK[0-9]+-atomic-[0-9]+$ ]] || exit 1  # 必须在原子任务分支工作
 ```
 
 #### 时间戳准确性验证
@@ -98,9 +99,11 @@ get_real_timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
 }
 
-# 日期分支命名函数 (Agent必须调用)
-get_date_branch_name() {
-  date '+%Y-%m-%d-%H%M'
+# 原子任务分支命名函数 (Agent必须调用)
+get_atomic_branch_name() {
+  local task_num="$1"
+  local atomic_num="$2"
+  echo "TASK${task_num}-atomic-${atomic_num}"
 }
 
 # 验证时间戳真实性 (质量门控调用)
@@ -553,7 +556,11 @@ qa persona (所有任务):
 ```yaml
 Layer 1 (Feature): main/master → 生产就绪功能集合
 Layer 2 (Phase): TASK branches → Phase级功能集成和质量验证  
-Layer 3 (Atomic): 日期分支 → 原子任务功能实现和基础验证
+Layer 3 (Atomic): TASK-atomic-NN分支 → 原子任务功能实现和基础验证
+
+分支命名规范:
+  Layer 3: {TASK}-atomic-{序号} (如: TASK01-atomic-01, TASK01-atomic-02)
+  优势: 语义明确、避免时间戳分支泛滥、Git commit提供时间追踪
 
 分支生命周期:
   Layer 3: 原子任务开始创建，完成后合并到TASK分支，24小时后自动清理
