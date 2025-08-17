@@ -1,28 +1,58 @@
-# Dependencies
+# ================================================
+# 反向忽略策略配置
+# ================================================
+# 
+# 策略说明：
+# 1. 本文件阻止敏感目录上传到远端Git仓库
+# 2. .ignore文件提供本地IDE访问白名单
+# 3. 实现"远端安全 + 本地可用"的双重保护
+#
+# ================================================
+
+# 核心开发目录 (反向忽略策略)
+# ------------------------------------------------
+PRPs/
+Context-Engineering-Intro/
+drafts/
+.claude/
+
+# 依赖和构建产物
+# ------------------------------------------------
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Environment variables
+# 环境变量文件 (安全敏感)
+# ------------------------------------------------
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
 .env.production.local
+.env.staging
 
-# Build outputs
+# 构建输出目录
+# ------------------------------------------------
 dist/
 build/
 .next/
+out/
+coverage/
 
-# IDE and editors
+# IDE和编辑器配置
+# ------------------------------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
-# OS generated files
+# 操作系统生成文件
+# ------------------------------------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -30,46 +60,76 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# Logs
-logs
+# 日志文件
+# ------------------------------------------------
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Runtime data
-pids
+# 运行时数据
+# ------------------------------------------------
+pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
+# 测试和覆盖率报告
+# ------------------------------------------------
 coverage/
 *.lcov
+.nyc_output/
+test-results/
+playwright-report/
 
-# Dependency directories
-jspm_packages/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
+# 缓存目录
+# ------------------------------------------------
+.npm/
+.yarn/
+.pnpm/
 .eslintcache
+*.tsbuildinfo
+.parcel-cache/
+.cache/
 
-# Supabase
+# Supabase本地开发
+# ------------------------------------------------
 .branches
 .temp
+supabase/.temp/
+supabase/logs/
 
-# Framework and development directories
-Context-Engineering-Intro/
-drafts/
-.claude/
+# 临时文件和备份
+# ------------------------------------------------
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
 
-# Files containing sensitive information (Stripe keys, etc.)
-drafts/16 Aug/PRPs/TASK01.md
+# 包管理器Lock文件 (可选)
+# ------------------------------------------------
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+
+# ================================================
+# 历史敏感文件 (已识别)
+# ================================================
 recycle/docs/supabase-migration-guide.md
 prd-reverse-engineering/final-docs/READMEfrontend-revised.md
 prd-reverse-engineering/final-docs/02-Development-Environment-Setup.md
 prd-reverse-engineering/final-docs/READMEbackend_modified.md
 prd-reverse-engineering/old_docs/SOPv1.3FinalMVP1.0.md
+
+# ================================================
+# 使用说明
+# ================================================
+#
+# 本地开发访问：参考 .ignore 文件配置IDE白名单
+# 新增敏感目录：同时更新此文件和 .ignore 文件
+# 
+# ================================================

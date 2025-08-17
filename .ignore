@@ -1,0 +1,104 @@
+# .ignore - 本地开发工具路径白名单
+# ================================================
+# 
+# 用途说明：
+# 本文件为Claude Code、IDE和开发工具提供路径白名单
+# 确保被.gitignore忽略的文件仍可在本地正常访问和引用
+#
+# 策略原理：
+# 1. .gitignore阻止文件上传远端 (安全性)
+# 2. .ignore启用本地IDE访问 (开发便利性)
+# 3. 实现"远端安全 + 本地可用"的双重目标
+#
+# ================================================
+
+# 核心开发目录白名单
+# ------------------------------------------------
+
+# Context Engineering框架文档
+!Context-Engineering-Intro/
+!Context-Engineering-Intro/**/*.md
+!Context-Engineering-Intro/**/*.yaml
+!Context-Engineering-Intro/**/*.ts
+!Context-Engineering-Intro/**/*.js
+
+# 项目需求文档 (PRP系统)
+!PRPs/
+!PRPs/*.md
+!PRPs/**/*.md
+!PRPs/templates/
+!PRPs/templates/**/*.md
+
+# 开发草稿和历史文档
+!drafts/
+!drafts/**/*.md
+!drafts/**/*.yaml
+!drafts/**/*.ts
+
+# Claude配置和命令
+!.claude/
+!.claude/**/*.md
+!.claude/**/*.json
+!.claude/**/*.yaml
+
+# 环境配置文件
+!.env
+!.env.local
+!.env.development
+!.env.test
+!.env.production
+
+# ================================================
+# IDE和工具集成说明
+# ================================================
+#
+# VS Code:
+# 在设置中添加 "files.exclude" 配置引用此文件
+#
+# Claude Code:
+# 工具会自动读取此文件作为@引用路径白名单
+#
+# WebStorm/IntelliJ:
+# 在项目设置中配置文件排除例外列表
+#
+# ================================================
+
+# 附加配置文件
+!*.config.js
+!*.config.ts
+!vitest.config.*
+!eslint.config.*
+!prettier.config.*
+
+# 文档和指南
+!README.md
+!CHANGELOG.md
+!LICENSE
+!*.md
+
+# TypeScript配置
+!tsconfig.json
+!tsconfig.*.json
+
+# Package配置
+!package.json
+!pnpm-lock.yaml
+!npm-lock.json
+!yarn.lock
+
+# 开发工具配置
+!.vscode/
+!.vscode/*.json
+!.gitignore
+!.ignore
+
+# ================================================
+# 使用说明
+# ================================================
+#
+# 1. IDE配置：将此文件路径添加到IDE的"排除例外"设置
+# 2. 开发工具：大多数现代工具会自动识别.ignore文件
+# 3. 维护：添加新的被忽略目录时，记得在此添加白名单规则
+#
+# 注意：路径格式遵循gitignore语法，! 表示例外（不忽略）
+# ================================================
