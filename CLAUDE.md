@@ -83,7 +83,7 @@
 
 ---
 
-## 🏗️ Layer 3: TDD-Todos自主执行协议 {#layer3-execution-protocol}
+## 🏗️ Layer 3: QAD-Todos自主执行协议 {#layer3-execution-protocol}
 
 ### 🚨 强制执行前验证 (架构合规性检查)
 
@@ -155,31 +155,32 @@ validate_timestamp_accuracy() {
 1. 接收到来自Layer 2的具体atomic task assignment  
 2. 确认Layer 1(PLANNING.md)约束和Layer 2(INITIAL.md + PRPs/TASK0X.md)验收标准
 3. 创建对应的`PRPs/TASK0X_LOG.md`开发操作日志文档
-4. 开始使用Claude Code内置`TodoWrite`工具生成临时TDD-Todos
+4. 开始使用Claude Code内置`TodoWrite`工具生成临时QAD-Todos
 
-**TDD核心原则** (不可违背):
-- ⚠️ **串行执行**: 一次只处理一个原子任务，完成全部3+1步骤才能开始下一任务
-- ⚠️ **TDD强制**: 必须先写测试，后写实现（红灯→绿灯→重构循环）
-- ⚠️ **完整周期**: 一个原子任务 = 一组3+1 TDD todos = 一个完整测试驱动开发周期
+**质量保证驱动开发原则** (MVP适配):
+- ⚠️ **串行执行**: 一次只处理一个原子任务，完成全部4步骤才能开始下一任务
+- ⚠️ **质量保证**: 优先保证代码质量和功能正确性，测试策略根据功能重要性调整
+- ⚠️ **完整周期**: 一个原子任务 = 一组研究-开发-测试-提交循环 = 一个完整质量保证开发周期
 
 **执行原则**:
-- **临时性**: Layer 3 TDD-Todos由Agent临时生成，**不创建持久化文档**
+- **临时性**: Layer 3 QAD-Todos由Agent临时生成，**不创建持久化文档**
 - **自主性**: Agent根据atomic task复杂度自主决定具体步骤数量和内容
-- **3+1步骤**: 基于TDD红灯→绿灯→重构→验证的标准测试驱动开发模式
-- **质量门控**: 深度检查上移至Layer 2智能质量门控，原子任务仅做基础验证
+- **4步循环**: 基于研究→开发→测试→提交的质量保证驱动开发模式
+- **分层测试**: 核心业务逻辑测试优先，其他功能实现优先，安全功能强制测试
+- **质量门控**: 轻量级验证机制，保持敏捷开发节奏
 - **操作记录**: 所有开发操作必须实时记录到对应的TASK0X_LOG.md文档
 
 ### 执行边界规则 (严格执行)
 
 **原子任务边界定义**:
-- **执行单元**: 一个原子任务 = 一组3+1 TDD todos = 一个完整测试驱动开发周期
+- **执行单元**: 一个原子任务 = 一组4步QAD循环 = 一个完整质量保证开发周期
 - **串行约束**: 所有步骤必须串行完成，禁止并行执行多个原子任务
 - **完成标准**: 必须完成当前原子任务的全部4个步骤才能开始下一个原子任务
 
 **Git分支时机与提交规则**:
 - **分支创建**: 开始第一个原子任务时创建日期分支 (YYYY-MM-DD-HHMM)
-- **中间提交**: 禁止在3+1步骤中间提交，保持原子性
-- **完成提交**: 第4步验证通过后立即commit，包含完整功能和测试
+- **中间提交**: 禁止在4步循环中间提交，保持原子性
+- **完成提交**: 第4步验证通过后立即commit，包含完整功能和必要测试
 - **分支合并**: 所有原子任务完成后合并到TASK分支
 
 **依赖关系处理**:
@@ -187,60 +188,62 @@ validate_timestamp_accuracy() {
 - **数据共享**: 通过完成的代码和测试传递状态，不通过内存共享
 - **状态检查**: 每个原子任务开始前验证前置条件是否满足
 
-### 3+1步骤执行模式 (简化的原子任务开发流程)
+### 4步QAD循环模式 (质量保证驱动开发流程)
 
-Agent执行Layer 2 atomic task时，使用`TodoWrite`工具生成标准的**3+1步骤**执行流程：
+Agent执行Layer 2 atomic task时，使用`TodoWrite`工具生成标准的**4步QAD循环**执行流程：
 
-#### 1. 测试设计阶段【TDD红灯】(主实现角色负责)
+#### 1. 研究与设计阶段【Research & Design】(主实现角色负责)
 ```bash
 # SuperClaude命令 (根据任务类型选择)
-/sc:test --write-failing-tests --persona-[backend|architect]
-/sc:design test-cases --atomic-task [task-name]
+/sc:analyze [atomic-task] --persona-[backend|architect] --c7 --seq
+/sc:design [solution] --mcp-research
 
 # Agent行为
-- 分析原子任务需求，理解期望的功能行为
-- 编写应该失败的测试用例（因为功能还未实现）
-- 定义清晰的验收标准和断言条件
-- 运行测试确认RED状态（测试失败）
+- 使用MCP工具（Context7, Sequential）检索最佳实践和技术方案
+- 分析原子任务需求和技术方案
+- 创建详细的todos规划和实现路径
+- 确定验证标准（不强制先写测试）
+- 识别依赖关系和潜在风险
 ```
 
-#### 2. 最小实现阶段【TDD绿灯】(同一主实现角色负责)
+#### 2. 实现与验证阶段【Implement & Validate】(同一主实现角色负责)
 ```bash
 # SuperClaude命令
-/sc:implement --minimal-passing --persona-[backend|architect]
-/sc:test --run-until-green
+/sc:implement [feature] --persona-[backend|architect] --quality-first
+/sc:validate --function-correct
 
 # Agent行为
-- 编写最少代码使测试通过（避免过度设计）
-- 专注功能实现，不做性能优化或复杂设计
-- 运行测试确认GREEN状态（所有测试通过）
-- 不添加测试未覆盖的功能
+- 基于研究结果进行功能实现
+- 灵活选择测试优先或实现优先策略（根据功能重要性）
+- 进行基础功能验证和核心逻辑正确性检查
+- 确保满足Layer 2定义的验收标准
 ```
 
-#### 3. 重构优化阶段【TDD重构】(同一主实现角色负责)
+#### 3. 测试与优化阶段【Test & Optimize】(同一主实现角色负责)
 ```bash
 # SuperClaude命令
-/sc:refactor --improve-design --persona-[backend|architect]
-/sc:test --continuous-validation
+/sc:test --complement-coverage --persona-[backend|architect]
+/sc:refactor --optimize-maintain
 
 # Agent行为
-- 改进代码结构和性能，但保持测试持续通过
-- 消除重复代码，提升可读性和可维护性
-- 添加必要的文档和注释
-- 确保重构后所有测试仍然通过（保持GREEN状态）
+- 编写必要的测试用例（根据功能重要性决定覆盖程度）
+- 代码重构和性能优化，保持测试通过
+- 确保代码质量和可维护性
+- 集成测试验证和接口兼容性检查
 ```
 
-#### 4. 验证提交阶段【质量门控】(qa persona负责)
+#### 4. 提交与更新阶段【Commit & Update】(qa persona负责)
 ```bash
 # SuperClaude命令
-/sc:test --comprehensive --validate-all
-/sc:git --tdd-commit --atomic-task
+/sc:validate --comprehensive --quality-gate
+/sc:git --commit-atomic-task
 
 # Agent行为
-- 运行完整测试套件，确保所有测试通过
-- 执行lint、build、type-check等质量检查
-- 验证TDD周期完整性：测试覆盖率、代码质量
-- Git commit到日期分支，包含功能代码和测试代码
+- qa persona执行完整质量检查和功能验证
+- 运行所有相关测试套件确保无回归
+- 执行lint、build、type-check等基础质量检查
+- Git commit到日期分支，包含功能代码和必要测试
+- 更新todos状态和任务进度
 ```
 
 ### v6.0专业检查简化
@@ -316,42 +319,44 @@ AI Agent估算:
 4. **上下文链接**: 每个todo包含对Layer 2 atomic task的引用
 5. **日志记录**: 每个todo执行时必须记录到对应的TASK0X_LOG.md
 
-**TodoWrite数据结构示例** (TDD标准实践):
+**TodoWrite数据结构示例** (QAD标准实践):
 ```javascript  
-// 单个原子任务的正确3+1 TDD todos示例
+// 单个原子任务的正确4步QAD todos示例
 TodoWrite([
   {
     id: "task01-1-step1",
-    content: "【backend】TDD红灯：编写Supabase连接、认证验证、环境配置失败测试用例",
+    content: "【backend】研究设计：使用MCP工具检索Supabase连接最佳实践，设计认证验证方案",
     status: "completed",
     priority: "high"
   },
   {
     id: "task01-1-step2",
-    content: "【backend】TDD绿灯：实现最小代码使所有测试通过，确认连接成功", 
+    content: "【backend】实现验证：基于研究结果实现连接功能，进行基础功能验证", 
     status: "in_progress",
     priority: "high"
   },
   {
     id: "task01-1-step3", 
-    content: "【backend】TDD重构：优化连接配置，提升代码可读性，保持测试绿色",
+    content: "【backend】测试优化：编写必要测试用例，优化连接配置和代码质量",
     status: "pending",
     priority: "medium"
   },
   {
     id: "task01-1-step4",
-    content: "【qa】质量门控：完整测试套件+lint+build+commit到日期分支",  
+    content: "【qa】提交更新：完整质量检查+lint+build+commit到原子任务分支",  
     status: "pending",
     priority: "high"
   }
 ])
 
-// 错误示例：批量创建多个原子任务的todos (违反串行执行原则)
-// ❌ 不要这样做 - Agent应该只为当前原子任务创建todos
+// ❌ 错误示例：批量创建多个原子任务的todos (违反串行执行原则)
 // TodoWrite([...task01-1, ...task01-2, ...task01-3]) // 错误！
 
-// 正确示例：完成当前原子任务后，再为下一个原子任务创建新的todos
-// ✅ 当task01-1完成后，才创建task01-2的todos
+// ❌ 错误示例：跳过研究阶段
+// TodoWrite([{content: "直接实现功能", ...}]) // 错误：跳过研究设计阶段
+
+// ✅ 正确示例：完成当前原子任务后，再为下一个原子任务创建新的todos
+// 当task01-1完成后，才创建task01-2的todos
 ```
 
 ### 开发操作日志记录规范
@@ -362,7 +367,7 @@ TodoWrite([
 - **纯操作记录**: 只记录实际执行的开发动作，不做评价或预测
 - **倒序排列**: 最新操作在顶部，格式：`[时间戳] 阶段标识 操作描述`
 - **技术语言**: 简洁准确的技术描述，避免主观性语言
-- **阶段标注**: 使用3+1步骤的阶段标识 (📋 分析设计、🚀 实现自测、🔧 集成准备、✅ 质量提交)
+- **阶段标注**: 使用4步QAD循环的阶段标识 (🔍 研究设计、🚀 实现验证、📦 测试优化、✅ 提交更新)
 - **Git独行**: commit信息独立section，包含完整commit hash和不超过一行字的标题式message
 
 **记录格式模板**:
@@ -391,35 +396,35 @@ TodoWrite([
 
 **v6.0新职责**: 统一工作流模板定义 + 验收标准制定 + 原子任务分解
 
-**核心简化**: 移除复杂的Component分类，采用统一的3+1步骤工作流模板，专注敏捷开发和功能交付。
+**核心简化**: 移除复杂的Component分类，采用统一4步QAD循环模板，专注敏捷开发和质量保证。
 
-### 统一3+1工作流模板
+### 统一4步QAD循环模板
 
 **所有任务通用的标准步骤**:
 ```yaml
-步骤1 - 需求分析与设计 (主实现角色):
-  - 分析任务需求和技术方案
-  - 设计实现路径和基础架构
-  - 识别依赖关系和风险
-  - 确定验证标准和成功指标
+步骤1 - 研究与设计 (主实现角色):
+  - 使用MCP工具检索最佳实践和技术方案
+  - 制定todos规划和实现路径
+  - 确定验证标准(不强制先写测试)
+  - 识别依赖关系和潜在风险
 
-步骤2 - 实现与自测 (同一主实现角色):
-  - 完成功能实现
-  - 编写基础单元测试
-  - 执行代码格式化和基础检查
-  - 满足基础质量要求
+步骤2 - 实现与验证 (同一主实现角色):
+  - 基于研究结果进行功能实现
+  - 灵活选择测试优先或实现优先策略
+  - 进行基础功能验证和核心逻辑正确性检查
+  - 确保满足基础质量要求
 
-步骤3 - 集成准备 (同一主实现角色):
-  - 验证接口兼容性
-  - 准备集成文档
-  - 确保代码符合项目规范
-  - 准备Phase验证所需材料
+步骤3 - 测试与优化 (同一主实现角色):
+  - 编写必要的测试用例(根据功能重要性决定覆盖程度)
+  - 代码重构和性能优化
+  - 确保代码质量和可维护性
+  - 集成测试验证和接口兼容性检查
 
-步骤4 - 质量验证与提交 (qa persona):
-  - 执行基础质量检查
-  - 运行测试验证
-  - 验证功能完整性
-  - 提交代码并更新状态
+步骤4 - 提交与更新 (qa persona):
+  - 执行完整质量检查和功能验证
+  - 运行相关测试套件确保无回归
+  - 代码提交和版本管理
+  - 更新任务状态和进度跟踪
 ```
 
 ### 角色选择指导
@@ -507,11 +512,11 @@ qa persona (所有任务):
 
 ### 设计原则
 
-**核心理念**: 敏捷优先、够用即可、人工灵活
+**核心理念**: 敏捷优先、质量保证、灵活处理
 
-- **敏捷优先**: 快速验证，不阻碍开发节奏
-- **够用即可**: 保留核心质量要求，移除过度检查  
-- **人工灵活**: 失败时人工处理，避免过度自动化
+- **敏捷优先**: MVP开发节奏，快速验证与迭代
+- **质量保证**: 分层测试策略，根据功能重要性调整质量要求  
+- **灵活处理**: 失败时人工分析，避免过度自动化
 
 ### 统一Phase完成验证
 
@@ -519,7 +524,7 @@ qa persona (所有任务):
 ```yaml
 自动检查:
   - [ ] 所有原子任务状态 = completed
-  - [ ] npm run test 通过 (单元测试覆盖率>80%)
+  - [ ] npm run test 通过 (分层测试策略: 核心业务>80%, 一般功能>60%)
   - [ ] npm run lint 通过 (ESLint代码规范)
   - [ ] npm run type-check 通过 (TypeScript类型验证)
   
@@ -527,6 +532,10 @@ qa persona (所有任务):
   - [ ] 功能手动验证通过
   - [ ] API接口响应正常
   - [ ] 数据库操作正确
+  
+MCP工具验证:
+  - [ ] 研究阶段使用Context7/Sequential检索最佳实践
+  - [ ] 实现阶段遵循研究结果和最佳实践
 ```
 
 **医疗平台特殊要求** (仅安全敏感功能):

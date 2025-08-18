@@ -182,9 +182,9 @@ PRPs/TASK0X.md (Layer2 战术实施)
 └── TASK09.md - 财务结算和提现 📋 🔄同步点H
     ↓
 Atomic Tasks (Layer3 执行单元 - 运行时生成)
-├── TDD-Todos 红绿重构循环 (详见CLAUDE.md)
-├── 一个原子任务 = 一组3+1 TDD步骤 = 一个完整测试驱动开发周期
-├── 串行执行，完成当前任务全部步骤才能开始下一任务
+├── QAD-Todos 研究开发测试提交循环 (详见CLAUDE.md)
+├── 一个原子任务 = 一组4步QAD循环 = 一个完整质量保证开发周期
+├── 串行执行，完成当前任务全部4步骤才能开始下一任务
 └── 实时进度状态同步到Layer2
 ```
 
@@ -220,18 +220,18 @@ Atomic Tasks (Layer3 执行单元 - 运行时生成)
 1. 接收任务 → 检查当前状态定位  
 2. 确认层级 → 识别Layer1/2/3任务  
 3. 找到上下文 → 通过任务树索引找到相关文档  
-4. 执行任务 → 按照TDD-Todos循环完成开发  
+4. 执行任务 → 按照QAD-Todos循环完成开发  
 5. 更新状态 → 完成后更新进度状态
 
 ### Layer3 自动生成规则
 
-#### v6.0框架TDD-Todos循环
+#### v6.0框架QAD循环
 - **输入**: TASK文档中的"最小单位任务列表"
-- **输出**: 3+1 TDD循环，包含测试设计(红灯)、最小实现(绿灯)、重构优化、验证提交
-- **核心原则**: 串行执行、TDD强制、完整周期
-- **工具集成**: SuperClaude命令和MCP服务器自动选择
+- **输出**: 4步QAD循环，包含研究设计、实现验证、测试优化、提交更新
+- **核心原则**: 串行执行、质量保证、完整周期、分层测试
+- **工具集成**: SuperClaude命令、MCP服务器自动选择、增强研究阶段
 
-具体的原子任务分解示例请参考: [examples/workflow-templates/layer3-task-examples.md](examples/workflow-templates/layer3-task-examples.md)
+具体的原子任务分解示例请参考: [examples/workflow-templates/layer3-qad-examples.md](examples/workflow-templates/layer3-qad-examples.md)
 
 ## 📖 当前任务定位和下一步行动
 
@@ -260,8 +260,8 @@ Atomic Tasks (Layer3 执行单元 - 运行时生成)
 - **性能指标**: API响应P95<500ms
 - **安全标准**: RLS策略覆盖，零高危漏洞
 
-### Git工作流规范 (v6.0三层分支策略)
-详细的Git工作流规范和质量门控集成请参考: [examples/git-workflow/quality-control-integration.md](examples/git-workflow/quality-control-integration.md)
+### Git工作流规范 (v6.0三层分支策略 + QAD集成)
+详细的Git工作流规范和质量门控集成请参考: [examples/git-workflow/qad-quality-integration.md](examples/git-workflow/qad-quality-integration.md)
 
 ## 如何用于生成PRP (提示)
 
