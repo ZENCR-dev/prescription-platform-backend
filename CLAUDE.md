@@ -1,7 +1,5 @@
 # CLAUDE.md - 后端执行规则手册
 
-**文档角色**: 本文仅定义"如何做"的执行规则与门控，不复述战略或API细节。
-
 ## 🔒 核心文档保护规范 (AI Agent强制遵守)
 
 **文档修改权限控制**：
@@ -577,6 +575,12 @@ MCP工具验证:
 - **单测**: npm run test (覆盖率门槛见PLANNING)
 - **迁移/类型**: supabase migration up (或dry-run)、supabase gen types typescript > types/database.types.ts
 - **Edge Functions**: supabase functions serve (或等价流程)
+
+### 协作边界验证检查 (QAD循环增强)
+- **职责边界验证**: 执行 `./scripts/prp-boundary-validator.sh` 确保无跨界违规
+- **API文档中心化验证**: 执行 `./scripts/api-consistency-checker.sh` 确保单一数据源
+- **Backend-First时序验证**: 验证开发时序符合协作检查点要求
+- **CKP检查点状态验证**: 确认协作检查点触发条件和完成标准
 
 ### 验证失败处理
 按PRP的"Validation Loop"修复后重试；禁止跳过。
