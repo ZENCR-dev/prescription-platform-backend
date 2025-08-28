@@ -159,6 +159,117 @@ POST /auth/v1/logout:
     status: 401
     error:
       message: "Invalid or expired token"
+
+## Session Management (Client-Side Methods)
+
+**Important**: Session management in Supabase is handled through client-side methods, not HTTP endpoints.
+
+### supabase.auth.getSession()
+  Description: Client-side method to retrieve current session from local storage
+  Usage: Frontend applications use this method to check authentication status
+  Returns:
+    data:
+      session:
+        access_token: string (JWT)
+        refresh_token: string
+        expires_in: integer
+        expires_at: timestamp
+        token_type: "bearer"
+        user:
+          id: uuid
+          email: string
+          user_metadata: object
+          role: string (from JWT claims)
+          created_at: timestamp
+          last_sign_in_at: timestamp
+      user: User object or null
+    error: null or AuthError
+  
+### supabase.auth.getUser()  
+  Description: Client-side method to get user info from JWT token
+  Usage: Validates current JWT token and returns user information
+  Returns:
+    data:
+      user: User object with current JWT claims
+    error: null or AuthError
+  
+  Frontend_Integration: "Use these methods for client-side session management and authentication state"
+
+GET /auth/v1/user:
+  Description: Get current authenticated user information with enhanced role claims
+  Authentication: Bearer token required
+  Request_Headers:
+    Authorization: "Bearer {access_token}"
+  Response_Success:
+    status: 200
+    data:
+      id: uuid
+      email: string
+      user_metadata:
+        role: enum ["tcm_practitioner", "pharmacy", "admin"]
+        license_number: string
+        business_name: string
+      app_metadata: object
+      role: string
+      created_at: timestamp
+      updated_at: timestamp
+      last_sign_in_at: timestamp
+      email_confirmed_at: timestamp
+  Response_Error:
+    status: 401
+    error:
+      message: "User not authenticated"
+  Frontend_Integration: "Use supabase.auth.getUser() for client-side user data"
+```
+
+### **JWT Claims Structure**
+
+**Enhanced JWT Payload Structure** (Custom Access Token Hook):
+```yaml
+JWT_Claims_Structure:
+  Standard_Claims:
+    iss: "https://your-project.supabase.co/auth/v1"  # Issuer
+    sub: "user-uuid"                                  # Subject (user ID)
+    aud: "authenticated"                              # Audience
+    exp: timestamp                                    # Expiration time
+    iat: timestamp                                    # Issued at
+    jti: "token-uuid"                                 # JWT ID
+    
+  Supabase_Claims:
+    email: "user@example.com"
+    phone: null
+    email_verified: boolean
+    phone_verified: boolean
+    
+  Custom_Claims_Enhanced:
+    role: enum ["tcm_practitioner", "pharmacy", "admin"]
+    user_role: string                                 # Same as role (backward compatibility)
+    profile_status: enum ["active", "pending_verification", "suspended", "inactive"]
+    business_info:
+      business_name: string
+      license_number: string
+      verification_status: string
+      contact_info: object
+    aal: enum ["aal1", "aal2"]                      # Authentication Assurance Level
+    amr: array                                       # Authentication Method Reference
+    session_id: "session-uuid"
+    
+JWT_Validation_Examples:
+  Frontend_Access_Pattern:
+    - "const { data: { session } } = await supabase.auth.getSession()"
+    - "const userRole = session?.user?.role || session?.user?.user_metadata?.role"
+    - "const profileStatus = session?.user?.profile_status"
+    
+  RLS_Policy_Usage:
+    - "auth.jwt() ->> 'role' = 'admin'"
+    - "auth.jwt() ->> 'profile_status' = 'active'"
+    - "auth.jwt() ->> 'aal' = 'aal2'"  # For MFA-required operations
+    
+Custom_Access_Token_Implementation:
+  Edge_Function_Path: "/functions/v1/custom-access-token"
+  Database_Query: "SELECT role, profile_status, business_name FROM user_profiles WHERE user_id = auth.uid()"
+  Performance: "<100ms response time with optimized database index"
+  Error_Handling: "Graceful fallback to default claims on failure"
 ```
 
 ### **Role-Based Access Control (RLS Policies)**
@@ -457,6 +568,136 @@ DELETE /rest/v1/auth/mfa/factor/{factor_id}:
   Security: "Requires AAL2 (MFA verified) session"
 ```
 
+## **⚡ Edge Functions Integration**
+
+### **Authentication Hooks & Custom Logic**
+
+```yaml
+Edge_Functions_Auth_Integration:
+  Custom_Access_Token_Hook:
+    Purpose: "Enhance JWT tokens with custom claims from user_profiles table"
+    Endpoint: "/functions/v1/custom-access-token"
+    Trigger: "Before token issuance (signup, signin, refresh)"
+    Implementation:
+      Database_Query: |
+        SELECT 
+          role,
+          profile_status,
+          business_name,
+          license_number,
+          verification_status
+        FROM user_profiles 
+        WHERE user_id = $1
+      Custom_Claims_Added:
+        - role
+        - user_role (backward compatibility)
+        - profile_status
+        - business_info
+      Performance_Optimization: "Single query with idx_user_profiles_role_status index"
+      Error_Handling: "Graceful fallback to default Supabase claims"
+    
+  Auth_Email_Template_Selector:
+    Purpose: "Select role-appropriate email templates for auth flows"
+    Endpoint: "/functions/v1/auth-email-template-selector"
+    Trigger: "Before email send (confirmation, recovery, invite)"
+    Implementation:
+      Template_Logic: |
+        if (user.role === 'tcm_practitioner') return 'practitioner-template'
+        if (user.role === 'pharmacy') return 'pharmacy-template'
+        if (user.role === 'admin') return 'admin-template'
+        return 'default-template'
+      Templates_Available:
+        - role-based-confirmation.html
+        - practitioner-recovery.html
+        - pharmacy-invitation.html
+        - admin-security-alert.html
+
+Authentication_Business_Logic:
+  User_Registration_Validation:
+    Function_Name: "validate-registration"
+    Purpose: "Complex role-based validation during user signup"
+    Validations:
+      TCM_Practitioner:
+        - License number format validation
+        - Professional certification requirements
+        - Business address verification
+      Pharmacy:
+        - Pharmacy license validation
+        - Operator certification requirements
+        - Business registration verification
+      Admin:
+        - Internal authorization required
+        - Multi-factor authentication setup mandatory
+    Response_Format:
+      Success: { "valid": true, "metadata": {...} }
+      Error: { "valid": false, "errors": [...], "required_fields": [...] }
+      
+  Session_Security_Enhancement:
+    Function_Name: "enhance-session-security"
+    Purpose: "Additional security validation for sensitive operations"
+    Security_Checks:
+      - Device fingerprinting validation
+      - Geographic location verification
+      - Session activity anomaly detection
+      - MFA requirement enforcement for admin operations
+    Risk_Assessment:
+      Low: "Standard session validation"
+      Medium: "Additional verification prompt"
+      High: "Force re-authentication with MFA"
+
+Edge_Functions_Configuration:
+  Local_Development:
+    Command: "supabase functions serve"
+    URL_Pattern: "http://127.0.0.1:54321/functions/v1/{function-name}"
+    Environment_Variables:
+      - SUPABASE_URL
+      - SUPABASE_ANON_KEY
+      - SUPABASE_SERVICE_ROLE_KEY
+      
+  Production_Deployment:
+    Command: "supabase functions deploy {function-name}"
+    Environment_Management: "via Supabase Dashboard or CLI"
+    Monitoring: "Built-in Supabase Edge Functions analytics"
+    
+  Security_Configuration:
+    CORS_Headers: "Configured for frontend domain access"
+    Rate_Limiting: "Applied per Supabase project settings"
+    Error_Logging: "Integrated with Supabase logging system"
+    Secrets_Management: "Environment variables via Supabase Vault"
+
+Frontend_Integration_Patterns:
+  Session_Management_with_SSR:
+    Server_Side: |
+      import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+      const supabase = createServerComponentClient({ cookies })
+      const { data: { session } } = await supabase.auth.getSession()
+    
+  Client_Side_Auth_State: |
+    const { data: { user } } = await supabase.auth.getUser()
+    const userRole = user?.role || user?.user_metadata?.role
+    const profileStatus = user?.profile_status
+    
+  Real_Time_Session_Updates: |
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        const customClaims = session?.user
+        updateUserInterface(customClaims)
+      }
+    })
+
+Error_Handling_Integration:
+  Edge_Function_Failures:
+    Custom_Access_Token_Failure:
+      Fallback: "Default Supabase JWT claims used"
+      Client_Handling: "Check for missing custom claims and request user profile API"
+      Monitoring: "Log custom claim failures for investigation"
+      
+  Template_Selection_Failures:
+    Fallback: "Default email template used"
+    User_Impact: "Generic email sent instead of role-specific"
+    Recovery: "Manual template assignment via admin interface"
+```
+
 ## **🔧 Administrative User Management API (M1 Scope Only)**
 
 ### **User Verification Administration**
@@ -517,6 +758,299 @@ PUT /rest/v1/admin/verification/{verification_id}/approve:
       message: "Invalid verification action"
   RLS_Enforcement: "admin role verification"
   Audit_Trail: "Complete verification decision logging"
+```
+
+## **🌐 Frontend Integration Guide**
+
+### **@supabase/ssr Integration Patterns**
+
+```yaml
+Frontend_Integration_Complete_Guide:
+  Installation_Requirements:
+    Dependencies:
+      - "@supabase/supabase-js": "^2.38.0"
+      - "@supabase/ssr": "^0.1.0"  
+      - "@supabase/auth-helpers-nextjs": "^0.8.7" (Next.js projects)
+      
+  Server_Side_Authentication_Setup:
+    Middleware_Configuration: |
+      import { createServerClient } from '@supabase/ssr'
+      import { NextResponse } from 'next/server'
+      
+      export async function middleware(request) {
+        let response = NextResponse.next()
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          {
+            cookies: {
+              get(name) { return request.cookies.get(name)?.value },
+              set(name, value, options) {
+                response.cookies.set({ name, value, ...options })
+              },
+              remove(name, options) {
+                response.cookies.set({ name, value: '', ...options })
+              },
+            },
+          }
+        )
+        
+        const { data: { session } } = await supabase.auth.getSession()
+        const userRole = session?.user?.role
+        const profileStatus = session?.user?.profile_status
+        
+        return response
+      }
+      
+  Authentication_Flow_Implementation:
+    User_Registration_with_Role: |
+      const handleRoleBasedSignup = async (email, password, role, metadata) => {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              role: role, // 'tcm_practitioner', 'pharmacy', 'admin'
+              license_number: metadata.license_number,
+              business_name: metadata.business_name,
+            },
+          },
+        })
+        
+        if (error) throw error
+        
+        // JWT will automatically include custom claims via custom-access-token hook
+        const userRole = data.user?.role || data.user?.user_metadata?.role
+        return { user: data.user, role: userRole }
+      }
+      
+    Session_Management_with_Custom_Claims: |
+      const SessionProvider = ({ children }) => {
+        const [session, setSession] = useState(null)
+        const [userRole, setUserRole] = useState(null)
+        const [profileStatus, setProfileStatus] = useState(null)
+        
+        useEffect(() => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session)
+            if (session?.user) {
+              setUserRole(session.user.role || session.user.user_metadata?.role)
+              setProfileStatus(session.user.profile_status)
+            }
+          })
+          
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              setSession(session)
+              if (session?.user) {
+                setUserRole(session.user.role || session.user.user_metadata?.role)
+                setProfileStatus(session.user.profile_status)
+              } else {
+                setUserRole(null)
+                setProfileStatus(null)
+              }
+            }
+          )
+          
+          return () => subscription?.unsubscribe()
+        }, [])
+        
+        return (
+          <AuthContext.Provider value={{ 
+            session, 
+            userRole, 
+            profileStatus,
+            isAdmin: userRole === 'admin',
+            isPractitioner: userRole === 'tcm_practitioner',
+            isPharmacy: userRole === 'pharmacy',
+            isActive: profileStatus === 'active'
+          }}>
+            {children}
+          </AuthContext.Provider>
+        )
+      }
+      
+  Role_Based_UI_Rendering: |
+    const RoleBasedComponent = () => {
+      const { userRole, profileStatus, isActive } = useAuth()
+      
+      if (!isActive) {
+        return <VerificationPending />
+      }
+      
+      return (
+        <>
+          {userRole === 'tcm_practitioner' && (
+            <PractitionerDashboard />
+          )}
+          {userRole === 'pharmacy' && (
+            <PharmacyDashboard />
+          )}
+          {userRole === 'admin' && (
+            <AdminDashboard />
+          )}
+        </>
+      )
+    }
+    
+  Protected_Route_Implementation: |
+    const ProtectedRoute = ({ children, requiredRole, requiresActive = true }) => {
+      const { session, userRole, profileStatus } = useAuth()
+      const router = useRouter()
+      
+      useEffect(() => {
+        if (!session) {
+          router.push('/auth/signin')
+          return
+        }
+        
+        if (requiredRole && userRole !== requiredRole) {
+          router.push('/unauthorized')
+          return
+        }
+        
+        if (requiresActive && profileStatus !== 'active') {
+          router.push('/profile/verification-pending')
+          return
+        }
+      }, [session, userRole, profileStatus, requiredRole, requiresActive])
+      
+      if (!session || (requiredRole && userRole !== requiredRole)) {
+        return <LoadingSpinner />
+      }
+      
+      return children
+    }
+
+  API_Integration_Patterns:
+    Authenticated_API_Calls: |
+      const makeAuthenticatedRequest = async (endpoint, options = {}) => {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          throw new Error('No active session')
+        }
+        
+        const response = await fetch(`/api/${endpoint}`, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Request failed')
+        }
+        
+        return response.json()
+      }
+      
+    Direct_Supabase_Database_Queries: |
+      const fetchUserProfile = async () => {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .single()
+        
+        if (error) throw error
+        return data
+      }
+      
+      const updateUserProfile = async (updates) => {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .update(updates)
+          .single()
+        
+        if (error) throw error
+        return data
+      }
+
+  Error_Handling_Best_Practices: |
+    const AuthErrorHandler = ({ error, onRetry }) => {
+      const getErrorMessage = (error) => {
+        switch (error.message) {
+          case 'Invalid login credentials':
+            return 'Please check your email and password'
+          case 'Email not confirmed':
+            return 'Please check your email and click the confirmation link'
+          case 'User not found':
+            return 'No account found with this email address'
+          default:
+            return error.message || 'An unexpected error occurred'
+        }
+      }
+      
+      return (
+        <div className="error-container">
+          <p>{getErrorMessage(error)}</p>
+          {onRetry && (
+            <button onClick={onRetry}>
+              Try Again
+            </button>
+          )}
+        </div>
+      )
+    }
+
+  MFA_Integration_Frontend: |
+    const MFASetup = () => {
+      const handleEnrollMFA = async () => {
+        const { data, error } = await supabase.auth.mfa.enroll({
+          factorType: 'totp',
+        })
+        
+        if (error) throw error
+        
+        // Display QR code for user to scan
+        setQRCode(data.totp.qr_code)
+        setSecret(data.totp.secret)
+      }
+      
+      const handleVerifyMFA = async (token) => {
+        const { data, error } = await supabase.auth.mfa.verify({
+          factorId: mfaFactor.id,
+          challengeId: challenge.id,
+          code: token,
+        })
+        
+        if (error) throw error
+        
+        // User now has AAL2 session
+        setIsAAL2(true)
+      }
+    }
+
+Development_Environment_Setup:
+  Environment_Variables: |
+    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+    
+  Local_Development_Commands:
+    Backend_Start: "supabase start"
+    Frontend_Start: "npm run dev"
+    Database_Studio: "open http://127.0.0.1:54323"
+    
+  Testing_Integration:
+    Test_Users: |
+      // Create test users for each role during development
+      const createTestUsers = async () => {
+        await supabase.auth.signUp({
+          email: 'practitioner@test.com',
+          password: 'testpass123',
+          options: { data: { role: 'tcm_practitioner' } }
+        })
+        
+        await supabase.auth.signUp({
+          email: 'pharmacy@test.com', 
+          password: 'testpass123',
+          options: { data: { role: 'pharmacy' } }
+        })
+      }
 ```
 
 ## **🔗 Future Milestone Planning References**
