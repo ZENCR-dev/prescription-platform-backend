@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Confirmation - TCM Platform</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .practitioner-theme { color: #2d5a27; }
+    .pharmacy-theme { color: #1f4e79; }
+    .admin-theme { color: #8b2635; }
+    .default-theme { color: #007bff; }
+    
+    .confirmation-button {
+      display: inline-block;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      margin: 20px 0;
+    }
+    .practitioner-button { background-color: #2d5a27; }
+    .pharmacy-button { background-color: #1f4e79; }
+    .admin-button { background-color: #8b2635; }
+    .default-button { background-color: #007bff; }
+    
+    .token-box {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+      font-family: monospace;
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e9ecef;
+      font-size: 12px;
+      color: #6c757d;
+      text-align: center;
+    }
+    .notice-box {
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .practitioner-notice { 
+      background-color: #e8f5e8; 
+      border-left: 4px solid #2d5a27; 
+    }
+    .pharmacy-notice { 
+      background-color: #e8f4f8; 
+      border-left: 4px solid #1f4e79; 
+    }
+    .admin-notice { 
+      background-color: #f8e8e8; 
+      border-left: 4px solid #8b2635; 
+    }
+    .default-notice { 
+      background-color: #e7f3ff; 
+      border-left: 4px solid #007bff; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      {{if eq .Data.role "tcm_practitioner"}}
+        <div class="practitioner-theme" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">🌿 TCM Prescription Platform</div>
+        <div class="practitioner-theme" style="font-size: 20px; margin-bottom: 20px;">Welcome, TCM Practitioner!</div>
+      {{else if eq .Data.role "pharmacy"}}
+        <div class="pharmacy-theme" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">💊 TCM Prescription Platform</div>
+        <div class="pharmacy-theme" style="font-size: 20px; margin-bottom: 20px;">Welcome, Pharmacy Partner!</div>
+      {{else if eq .Data.role "admin"}}
+        <div class="admin-theme" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">⚖️ TCM Platform Administration</div>
+        <div class="admin-theme" style="font-size: 20px; margin-bottom: 20px;">Welcome, Platform Administrator</div>
+      {{else}}
+        <div class="default-theme" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">TCM Prescription Platform</div>
+        <div class="default-theme" style="font-size: 20px; margin-bottom: 20px;">Welcome to TCM Platform</div>
+      {{end}}
+    </div>
+
+    {{if eq .Data.role "tcm_practitioner"}}
+      <p>Dear Traditional Chinese Medicine Practitioner,</p>
+      <p>Welcome to our secure digital prescription platform. Your practitioner account registration is almost complete.</p>
+      
+      <div class="notice-box practitioner-notice">
+        <strong>Professional Verification Required</strong><br>
+        As a licensed TCM practitioner, your account will be subject to professional license verification to ensure compliance with medical practice standards.
+      </div>
+      
+      <p><strong>Please confirm your email address to activate your practitioner account:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="{{ .ConfirmationURL }}" class="confirmation-button practitioner-button">
+          Confirm Practitioner Account
+        </a>
+      </div>
+      
+      <p><strong>What's next after confirmation?</strong></p>
+      <ul>
+        <li>Complete your professional profile and license verification</li>
+        <li>Set up your digital prescription templates</li>
+        <li>Configure your practice preferences and billing information</li>
+        <li>Start creating secure digital prescriptions</li>
+      </ul>
+
+    {{else if eq .Data.role "pharmacy"}}
+      <p>Dear Pharmacy Team,</p>
+      <p>Thank you for joining our TCM prescription fulfillment network. Your pharmacy partner account registration is almost complete.</p>
+      
+      <div class="notice-box pharmacy-notice">
+        <strong>Business Verification Required</strong><br>
+        As a pharmaceutical partner, your pharmacy license and business credentials will be verified to ensure compliance with pharmaceutical regulations and quality standards.
+      </div>
+      
+      <p><strong>Please confirm your email address to activate your pharmacy partner account:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="{{ .ConfirmationURL }}" class="confirmation-button pharmacy-button">
+          Confirm Pharmacy Account
+        </a>
+      </div>
+      
+      <div style="background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin: 20px 0;">
+        <h3 class="pharmacy-theme" style="margin-top: 0;">Your Pharmacy Partner Benefits:</h3>
+        <ul>
+          <li><strong>QR Code Fulfillment System:</strong> Scan and process prescriptions instantly</li>
+          <li><strong>Inventory Management:</strong> Optimize your TCM herb stock levels</li>
+          <li><strong>Bulk Settlement:</strong> Streamlined payment and reconciliation process</li>
+          <li><strong>Quality Assurance:</strong> Digital proof of fulfillment documentation</li>
+          <li><strong>Analytics Dashboard:</strong> Track performance and revenue metrics</li>
+        </ul>
+      </div>
+
+    {{else if eq .Data.role "admin"}}
+      <div class="notice-box admin-notice">
+        <strong>⚠️ Administrative Access Security</strong><br>
+        This account provides full platform administration access including user management, compliance oversight, and system configuration. Please ensure this access is properly secured and monitored.
+      </div>
+      
+      <p>Dear Platform Administrator,</p>
+      <p>Your administrator account for the TCM Prescription Platform has been created and requires confirmation to activate full administrative privileges.</p>
+      
+      <p><strong>Please confirm your email address to activate your administrator account:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="{{ .ConfirmationURL }}" class="confirmation-button admin-button">
+          Confirm Administrator Account
+        </a>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 3px solid #8b2635;">
+          <div style="font-weight: bold; color: #8b2635; margin-bottom: 5px;">User Management</div>
+          <div>Practitioner and pharmacy account oversight, license verification, account status management</div>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 3px solid #8b2635;">
+          <div style="font-weight: bold; color: #8b2635; margin-bottom: 5px;">Compliance Monitoring</div>
+          <div>HIPAA audit trails, regulatory compliance checks, quality assurance oversight</div>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 3px solid #8b2635;">
+          <div style="font-weight: bold; color: #8b2635; margin-bottom: 5px;">Financial Oversight</div>
+          <div>Transaction monitoring, settlement management, dispute resolution, revenue analytics</div>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 3px solid #8b2635;">
+          <div style="font-weight: bold; color: #8b2635; margin-bottom: 5px;">System Administration</div>
+          <div>Platform configuration, feature flags, monitoring dashboards, security settings</div>
+        </div>
+      </div>
+
+    {{else}}
+      <p>Welcome to the TCM Prescription Platform!</p>
+      <p>Your account registration is almost complete. Please confirm your email address to activate your account.</p>
+      
+      <div class="notice-box default-notice">
+        <strong>Account Verification Required</strong><br>
+        Please confirm your email address to complete your account setup and access the platform.
+      </div>
+      
+      <p><strong>Please confirm your email address:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="{{ .ConfirmationURL }}" class="confirmation-button default-button">
+          Confirm Account
+        </a>
+      </div>
+    {{end}}
+
+    <p><strong>Alternative:</strong> If the button doesn't work, enter this verification code in the application:</p>
+    <div class="token-box">{{ .Token }}</div>
+
+    {{if eq .Data.role "tcm_practitioner"}}
+      <div class="notice-box practitioner-notice">
+        <strong>Privacy & Security:</strong> Your account maintains HIPAA compliance standards. No patient personal information is stored in our system - only prescription details and medical recommendations.
+      </div>
+    {{else if eq .Data.role "pharmacy"}}
+      <div class="notice-box pharmacy-notice">
+        <strong>Compliance & Quality:</strong> Your pharmacy operations must maintain pharmaceutical-grade quality standards and regulatory compliance. All fulfillment activities are audited for quality assurance.
+      </div>
+    {{else if eq .Data.role "admin"}}
+      <div class="notice-box admin-notice">
+        <strong>Security Requirements:</strong> Administrator accounts require multi-factor authentication (MFA) and regular security reviews. All administrative actions are logged and auditable for compliance purposes.
+      </div>
+    {{end}}
+
+    <div class="footer">
+      {{if eq .Data.role "tcm_practitioner"}}
+        <p>This account is for licensed TCM practitioners only. If you received this email by mistake, please ignore it.</p>
+        <p>Contact: support@tcm-platform.com | User: {{ .Email }}</p>
+      {{else if eq .Data.role "pharmacy"}}
+        <p>This account is for licensed pharmacy operations only. If you received this email by mistake, please ignore it.</p>
+        <p>Partner Support: pharmacy-support@tcm-platform.com | Partner ID: {{ .Email }}</p>
+      {{else if eq .Data.role "admin"}}
+        <p>This account provides administrative access to sensitive platform data and functions. If you did not request this account or received this email by mistake, please contact security immediately.</p>
+        <p>Administrator Support: admin-security@tcm-platform.com | Admin ID: {{ .Email }}</p>
+      {{else}}
+        <p>Welcome to TCM Platform! If you received this email by mistake, please ignore it.</p>
+        <p>Support: support@tcm-platform.com | User: {{ .Email }}</p>
+      {{end}}
+      <p><a href="{{ .SiteURL }}">Visit TCM Platform</a></p>
+    </div>
+  </div>
+</body>
+</html>
