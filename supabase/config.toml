@@ -240,10 +240,11 @@ inactivity_timeout = "2h"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
+# Temporarily disabled for RLS testing - Task 1.1 already implemented this
 [auth.hook.custom_access_token]
-enabled = true
-uri = "http://127.0.0.1:54321/functions/v1/custom-access-token"
-secrets = []
+enabled = false
+# uri = "http://127.0.0.1:54321/functions/v1/custom-access-token"
+# secrets = {}
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
