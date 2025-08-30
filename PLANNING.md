@@ -413,6 +413,112 @@ Layer3: 执行质量控制
                    本项目核心开发领域              本项目专注开发领域
 ```
 
+### 🔧 现代Supabase v2.39.2本地开发环境配置
+
+**环境要求与配置标准**:
+```yaml
+基础环境要求:
+  Docker_Desktop: "必需 - Supabase本地栈容器基础"
+  Supabase_CLI: "v2.39.2+ - 现代化命令结构"
+  PostgreSQL_Client: "libpq - 数据库直接访问工具"
+  Node_js: "v18+ - Edge Functions开发环境"
+
+安装配置命令:
+  # 安装PostgreSQL客户端工具
+  brew install libpq
+  
+  # 配置psql PATH
+  echo 'export PATH="/opt/homebrew/opt/libpq/bin:$PATH"' >> ~/.zshrc
+  source ~/.zshrc
+  
+  # 验证环境
+  docker --version        # 确认Docker可用
+  supabase --version     # 确认CLI版本≥2.39.2
+  psql --version         # 确认客户端工具可用
+```
+
+**标准开发工作流程**:
+```yaml
+环境启动流程:
+  1_Docker_Ready: "启动Docker Desktop，确保docker ps可执行"
+  2_Supabase_Start: "supabase start - 启动完整本地开发栈"
+  3_Service_Check: "supabase status - 验证所有服务正常运行"
+  4_Database_Ready: "supabase db reset - 应用所有迁移文件"
+
+核心开发循环:
+  Schema_Development: "supabase db diff - 检查模式变更"
+  Migration_Management: "supabase db reset - 重新应用迁移"
+  Testing_Execution: "psql postgresql://postgres:postgres@localhost:54322/postgres -f tests/file.sql"
+  Type_Generation: "supabase gen types typescript --local > types/database.types.ts"
+  
+本地服务端口标准:
+  API_Gateway: "localhost:54321 - RESTful API接口"
+  PostgreSQL_DB: "localhost:54322 - 数据库直连端口"
+  Supabase_Studio: "localhost:54323 - 管理界面"
+  Auth_Server: "localhost:54324 - 认证服务"
+```
+
+**Docker在Supabase开发中的合法作用**:
+```yaml
+合法用途明确:
+  ✅ Local_Stack: "supabase start提供的官方本地测试环境"
+  ✅ Development_Only: "仅限开发阶段，生产环境完全云端"
+  ✅ CLI_Managed: "完全由Supabase CLI管理，无需手动配置"
+  
+禁止用途明确:
+  ❌ Custom_Backend: "禁止自建Docker后端服务"
+  ❌ Production_Deploy: "禁止Docker生产部署，仅云端部署"
+  ❌ Manual_Setup: "禁止手动Docker配置，必须使用supabase start"
+  
+角色定义:
+  Purpose: "本地测试环境提供者，非生产架构组件"
+  Management: "完全由Supabase CLI自动管理"
+  Lifecycle: "开发期工具，与生产架构无关"
+```
+
+**现代CLI命令对照表**:
+```yaml
+已移除命令_v2_39_2:
+  ❌ "supabase db psql"     # 使用: psql + 连接字符串
+  ❌ "supabase db shell"    # 使用: psql postgresql://...
+  
+新标准命令:
+  ✅ "supabase start"       # 启动本地开发环境
+  ✅ "supabase db reset"    # 重新应用所有迁移
+  ✅ "supabase db diff"     # 检查模式差异
+  ✅ "supabase db lint"     # SQL语法验证
+  ✅ "supabase status"      # 服务状态检查
+  
+测试执行方式:
+  Direct_PostgreSQL: "psql postgresql://postgres:postgres@localhost:54322/postgres -f test.sql"
+  Studio_Interface: "http://localhost:54323 - 图形界面执行"
+  Remote_Testing: "supabase link --project-ref <id> - 远程测试"
+```
+
+**开发环境故障排除**:
+```yaml
+常见问题解决:
+  Docker_Not_Running:
+    症状: "Cannot connect to the Docker daemon"
+    解决: "启动Docker Desktop，确认docker ps工作"
+    
+  Missing_psql:
+    症状: "psql: command not found"
+    解决: "brew install libpq，更新PATH配置"
+    
+  Port_Conflicts:
+    症状: "Error: Port 54322 is already in use"
+    解决: "supabase stop && supabase start重置环境"
+    
+  Migration_Issues:
+    症状: "Migration failed to apply"
+    解决: "supabase db reset重新应用所有迁移"
+    
+  Service_Startup:
+    症状: "Services not starting properly"
+    解决: "检查Docker资源限制，重启Docker Desktop"
+```
+
 ### 🔐 安全架构核心策略
 **RLS数据隔离**:
 - 医师: `auth.uid() = doctor_id` 完全隔离

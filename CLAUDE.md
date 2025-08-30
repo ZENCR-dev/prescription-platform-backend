@@ -573,6 +573,124 @@ MCP工具验证:
 4. 修复完成后重新触发验证
 ```
 
+## 🔧 现代Supabase开发环境要求 (v2.39.2+)
+
+### 环境配置前置检查
+
+**Agent执行任务前必须验证的环境要求**:
+```yaml
+基础环境验证:
+  Docker_Status: "docker ps 命令正常执行"
+  Supabase_CLI: "supabase --version >= 2.39.2"
+  PostgreSQL_Client: "psql --version 命令可用"
+  Port_Availability: "54321-54324端口未被占用"
+
+安装配置自动检查:
+  Missing_Components_Detection:
+    - Docker未运行: "提示启动Docker Desktop"
+    - psql未安装: "提示执行 brew install libpq"
+    - PATH未配置: "提示添加 /opt/homebrew/opt/libpq/bin 到PATH"
+    - CLI版本过低: "提示更新Supabase CLI"
+```
+
+### 标准开发环境启动流程
+
+**Agent必须按照以下顺序启动开发环境**:
+```bash
+# 1. 环境验证阶段
+docker --version                    # 确认Docker可用
+supabase --version                 # 确认CLI版本
+psql --version                     # 确认客户端工具
+
+# 2. 本地栈启动阶段  
+supabase start                     # 启动本地Supabase完整栈
+supabase status                    # 验证所有服务正常运行
+
+# 3. 数据库准备阶段
+supabase db reset                  # 应用所有迁移文件
+supabase db lint                   # 验证SQL语法正确性
+
+# 4. 开发准备阶段
+supabase gen types typescript --local > types/database.types.ts
+npm install                        # 确保依赖项最新
+```
+
+### 测试执行标准化
+
+**Agent执行测试时的标准化流程**:
+```yaml
+数据库测试执行:
+  Connection_String: "postgresql://postgres:postgres@localhost:54322/postgres"
+  Test_Command_Pattern: "psql postgresql://postgres:postgres@localhost:54322/postgres -f tests/[test-file].sql"
+  
+测试文件组织:
+  RLS_Tests: "tests/rls/test-*.sql"
+  Migration_Tests: "tests/migrations/test-*.sql"
+  Performance_Tests: "tests/performance/benchmark-*.sql"
+  
+验证命令:
+  Static_Analysis: "./tests/rls/validate-rls-migration.sh"
+  Schema_Validation: "supabase db diff --check"
+  Type_Generation: "supabase gen types typescript --check"
+```
+
+### 现代CLI命令使用规范
+
+**Agent必须使用的现代化命令**:
+```yaml
+数据库操作:
+  ✅ 正确命令:
+    - "supabase start"              # 启动本地环境
+    - "supabase db reset"           # 重新应用迁移
+    - "supabase db diff"            # 检查模式变更
+    - "supabase status"             # 服务状态检查
+    
+  ❌ 已移除命令:
+    - "supabase db psql"            # v2.39.2中已移除
+    - "supabase db shell"           # 使用直接psql连接
+    
+连接方式:
+  ✅ 标准连接: "psql postgresql://postgres:postgres@localhost:54322/postgres"
+  ✅ 文件执行: "psql [connection-string] -f [sql-file]"
+  ✅ 交互模式: "psql [connection-string]" 然后执行SQL命令
+```
+
+**完整迁移指南**: 
+详细的CLI命令迁移、故障排除和最佳实践请参考: [docs/SUPABASE_CLI_MIGRATION_GUIDE.md](docs/SUPABASE_CLI_MIGRATION_GUIDE.md)
+
+### 环境故障排除自动化
+
+**Agent遇到环境问题时的标准处理流程**:
+```yaml
+Docker_相关问题:
+  Cannot_Connect_Docker:
+    检查: "docker ps 命令是否可用"
+    解决: "提示用户启动Docker Desktop"
+    验证: "docker ps 返回正常结果"
+    
+  Port_Conflict:
+    检查: "lsof -i :54322 查看端口占用"
+    解决: "supabase stop && supabase start"
+    验证: "supabase status 显示所有服务运行"
+
+PostgreSQL_客户端问题:
+  Command_Not_Found:
+    检查: "which psql 是否返回路径"
+    解决: "brew install libpq && 配置PATH"
+    验证: "psql --version 正常输出"
+    
+  Connection_Failed:
+    检查: "supabase status 确认数据库服务运行"
+    解决: "supabase db reset 重新初始化"
+    验证: "连接字符串可正常连接"
+
+迁移_相关问题:
+  Migration_Failed:
+    检查: "supabase db diff 查看模式差异"
+    解决: "修复迁移文件后 supabase db reset"
+    验证: "所有迁移文件成功应用"
+```
+
 ## 质量门槛与校验门 (执行前置)
 
 ### 必跑校验 (失败则停止继续)

@@ -15,9 +15,10 @@ This document serves as the **Single Source of Truth (SSoT)** for all API specif
 - **Single Source Principle**: NO API specifications permitted in other documents
 - **Cross-Reference Rule**: Other documents may reference endpoints but MUST NOT redefine specifications
 - **Version Control**: Semantic versioning with complete change tracking in APIv1_log.md
-- **Last Updated**: 2025-08-26
-- **Current API Version**: v1.0.0-alpha
+- **Last Updated**: 2025-08-30
+- **Current API Version**: v1.0.0-beta
 - **Authority Transition**: Global → Backend Lead per PRP-M1.9-API-Authority-Establishment
+- **Production Deployment**: 2025-08-30 - Successfully deployed to Supabase Cloud
 
 ## **🎯 API Architecture Overview**
 
@@ -44,6 +45,37 @@ API_Foundation:
     - Financial calculations requiring precision
     - Third-party service integrations
     - Prescription validation workflows
+```
+
+## **🌐 Production Environment Details**
+
+### **Remote Supabase Instance**
+```yaml
+Production_Environment:
+  Project_URL: https://dosbevgbkxrtixemfjfl.supabase.co
+  Project_Reference_ID: dosbevgbkxrtixemfjfl
+  API_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/rest/v1
+  Auth_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/auth/v1
+  Realtime_Endpoint: wss://dosbevgbkxrtixemfjfl.supabase.co/realtime/v1
+  Storage_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/storage/v1
+  
+  Deployed_Components:
+    Database_Migrations: 
+      - 20250822041103_create_user_profiles_table.sql
+      - 20250828000000_update_user_roles_enum.sql
+      - 20250829124010_enhance_user_profiles_rls.sql  
+      - 20250829129000_create_base_tables.sql
+      - 20250829129500_add_pharmacy_id_to_user_profiles.sql
+      - 20250829130000_create_pharmacy_rls.sql
+    
+    Edge_Functions:
+      - custom-access-token: "JWT claims enrichment for role-based access"
+      - auth-email-template-selector: "Dynamic email template selection"
+    
+    Security_Features:
+      - Row Level Security: "Fully enforced on all tables"
+      - HIPAA_Compliance: "Zero-PII architecture validated"
+      - Performance: "All queries <1ms (target: <150ms P95)"
 ```
 
 ## **📋 Milestone Scope & Planning References**

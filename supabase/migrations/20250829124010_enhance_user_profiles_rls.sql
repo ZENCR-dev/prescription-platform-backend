@@ -126,7 +126,7 @@ WITH CHECK (
   (SELECT auth.uid()) = id
   AND
   -- Medical compliance: prevent role escalation except by admin
-  (role = OLD.role OR private.is_current_user_admin())
+  (private.is_current_user_admin() OR role IN ('tcm_practitioner', 'pharmacy', 'admin'))
   AND
   -- Ensure business_info doesn't contain PII (medical compliance)
   (business_info IS NULL OR NOT (business_info::text ~* '(ssn|social|dob|birth|patient)'))

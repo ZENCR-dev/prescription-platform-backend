@@ -11,7 +11,6 @@
 
 # 核心开发目录 (反向忽略策略)
 # ------------------------------------------------
-PRPs/
 Context-Engineering-Intro/
 drafts/
 .claude/

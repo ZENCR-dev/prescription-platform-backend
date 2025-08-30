@@ -42,6 +42,8 @@ as $$
 $$;
 
 -- Check if practitioner has access to specific prescription
+-- TODO: Enable after prescriptions table is created in future migration
+/*
 create or replace function private.has_prescription_access(prescription_uuid uuid)
 returns boolean
 language sql security definer stable
@@ -53,6 +55,7 @@ as $$
     and practitioner_id = (select auth.uid())
   );
 $$;
+*/
 
 -- Check if current user is authenticated practitioner (optimized)
 create or replace function private.is_authenticated_practitioner()
