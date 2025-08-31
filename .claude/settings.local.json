@@ -15,7 +15,8 @@
       "Bash(rg:*)",
       "Bash(mv:*)",
       "Bash(/opt/homebrew/opt/libpq/bin/psql:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(export:*)"
     ],
     "deny": [
       "Read(**/.env*)",

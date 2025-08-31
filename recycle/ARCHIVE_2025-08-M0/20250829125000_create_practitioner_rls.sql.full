@@ -1,0 +1,425 @@
+-- =====================================================
+-- TCM Practitioner RLS Policies Implementation
+-- =====================================================
+-- Purpose: Complete data isolation for TCM practitioners
+-- Target Tables: prescriptions, prescription_items, revenue_transactions, consultation_notes, patient_records
+-- Medical Compliance: HIPAA zero-PII architecture with audit trail
+-- Performance Target: <150ms P95 response time
+-- =====================================================
+
+-- =====================================================
+-- 1. CREATE SECURITY DEFINER FUNCTIONS
+-- =====================================================
+
+-- Function to get current practitioner ID (optimized)
+CREATE OR REPLACE FUNCTION private.get_current_practitioner_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = private, public
+AS $$
+  SELECT id 
+  FROM public.user_profiles 
+  WHERE id = auth.uid() 
+    AND role = 'tcm_practitioner'
+    AND status = 'active'
+  LIMIT 1;
+$$;
+
+-- Function to verify practitioner owns prescription
+CREATE OR REPLACE FUNCTION private.practitioner_owns_prescription(prescription_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = private, public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM public.prescriptions 
+    WHERE id = prescription_id 
+      AND practitioner_id = auth.uid()
+    LIMIT 1
+  );
+$$;
+
+-- Function to check if practitioner can access patient record
+CREATE OR REPLACE FUNCTION private.practitioner_can_access_patient(patient_record_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = private, public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM public.prescriptions p
+    WHERE p.patient_record_id = patient_record_id 
+      AND p.practitioner_id = auth.uid()
+    LIMIT 1
+  );
+$$;
+
+-- =====================================================
+-- 2. CREATE PRESCRIPTION MANAGEMENT TABLES & RLS
+-- =====================================================
+
+-- Prescriptions table (if not exists)
+CREATE TABLE IF NOT EXISTS public.prescriptions (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  practitioner_id uuid NOT NULL REFERENCES auth.users(id),
+  patient_record_id uuid NOT NULL, -- Anonymized patient reference
+  prescription_number text NOT NULL UNIQUE,
+  diagnosis jsonb NOT NULL, -- TCM diagnosis patterns
+  treatment_principle text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  total_amount integer NOT NULL DEFAULT 0, -- In NZD cents
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT valid_status CHECK (status IN ('draft', 'pending', 'active', 'fulfilled', 'cancelled'))
+);
+
+-- Enable RLS on prescriptions
+ALTER TABLE public.prescriptions ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if any
+DROP POLICY IF EXISTS "Practitioners can view own prescriptions" ON public.prescriptions;
+DROP POLICY IF EXISTS "Practitioners can create prescriptions" ON public.prescriptions;
+DROP POLICY IF EXISTS "Practitioners can update own prescriptions" ON public.prescriptions;
+DROP POLICY IF EXISTS "Practitioners can delete draft prescriptions" ON public.prescriptions;
+
+-- Practitioner RLS policies for prescriptions
+CREATE POLICY "Practitioners can view own prescriptions"
+  ON public.prescriptions
+  FOR SELECT
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid() 
+    AND EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() 
+        AND role = 'tcm_practitioner'
+        AND status = 'active'
+    )
+  );
+
+CREATE POLICY "Practitioners can create prescriptions"
+  ON public.prescriptions
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+  );
+
+CREATE POLICY "Practitioners can update own prescriptions"
+  ON public.prescriptions
+  FOR UPDATE
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+    AND status IN ('draft', 'pending')
+  )
+  WITH CHECK (
+    practitioner_id = auth.uid()
+  );
+
+CREATE POLICY "Practitioners can delete draft prescriptions"
+  ON public.prescriptions
+  FOR DELETE
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+    AND status = 'draft'
+  );
+
+-- =====================================================
+-- 3. CREATE PRESCRIPTION ITEMS TABLE & RLS
+-- =====================================================
+
+-- Prescription items table
+CREATE TABLE IF NOT EXISTS public.prescription_items (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  prescription_id uuid NOT NULL REFERENCES public.prescriptions(id) ON DELETE CASCADE,
+  herb_name text NOT NULL,
+  dosage numeric(10,2) NOT NULL,
+  unit text NOT NULL DEFAULT 'g',
+  processing_method text,
+  special_instructions text,
+  unit_price integer NOT NULL DEFAULT 0, -- In NZD cents
+  subtotal integer NOT NULL DEFAULT 0, -- In NZD cents
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS on prescription_items
+ALTER TABLE public.prescription_items ENABLE ROW LEVEL SECURITY;
+
+-- Practitioner RLS policies for prescription items
+CREATE POLICY "Practitioners can view own prescription items"
+  ON public.prescription_items
+  FOR SELECT
+  TO authenticated
+  USING (
+    private.practitioner_owns_prescription(prescription_id)
+  );
+
+CREATE POLICY "Practitioners can manage own prescription items"
+  ON public.prescription_items
+  FOR ALL
+  TO authenticated
+  USING (
+    private.practitioner_owns_prescription(prescription_id)
+  )
+  WITH CHECK (
+    private.practitioner_owns_prescription(prescription_id)
+  );
+
+-- =====================================================
+-- 4. CREATE REVENUE TRANSACTIONS TABLE & RLS
+-- =====================================================
+
+-- Revenue transactions table
+CREATE TABLE IF NOT EXISTS public.revenue_transactions (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  practitioner_id uuid NOT NULL REFERENCES auth.users(id),
+  prescription_id uuid REFERENCES public.prescriptions(id),
+  transaction_type text NOT NULL,
+  amount integer NOT NULL, -- In NZD cents (can be negative for refunds)
+  balance_after integer NOT NULL DEFAULT 0, -- Running balance in cents
+  description text,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz DEFAULT now(),
+  processed_at timestamptz,
+  CONSTRAINT valid_transaction_type CHECK (transaction_type IN ('prescription_fee', 'withdrawal', 'refund', 'adjustment')),
+  CONSTRAINT valid_status CHECK (status IN ('pending', 'completed', 'failed', 'cancelled'))
+);
+
+-- Enable RLS on revenue_transactions
+ALTER TABLE public.revenue_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Practitioner RLS policies for revenue
+CREATE POLICY "Practitioners can view own revenue"
+  ON public.revenue_transactions
+  FOR SELECT
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+  );
+
+-- Practitioners cannot directly modify revenue (system-managed)
+
+-- =====================================================
+-- 5. CREATE CONSULTATION NOTES TABLE & RLS
+-- =====================================================
+
+-- Consultation notes table (private medical records)
+CREATE TABLE IF NOT EXISTS public.consultation_notes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  practitioner_id uuid NOT NULL REFERENCES auth.users(id),
+  prescription_id uuid REFERENCES public.prescriptions(id),
+  patient_record_id uuid NOT NULL,
+  notes_encrypted text NOT NULL, -- Encrypted consultation notes
+  tcm_diagnosis jsonb NOT NULL,
+  pulse_reading jsonb,
+  tongue_diagnosis jsonb,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS on consultation_notes
+ALTER TABLE public.consultation_notes ENABLE ROW LEVEL SECURITY;
+
+-- Strict practitioner-only access
+CREATE POLICY "Practitioners can view own consultation notes"
+  ON public.consultation_notes
+  FOR SELECT
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+  );
+
+CREATE POLICY "Practitioners can create consultation notes"
+  ON public.consultation_notes
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+  );
+
+CREATE POLICY "Practitioners can update own consultation notes"
+  ON public.consultation_notes
+  FOR UPDATE
+  TO authenticated
+  USING (
+    practitioner_id = auth.uid()
+    AND private.get_current_practitioner_id() IS NOT NULL
+  )
+  WITH CHECK (
+    practitioner_id = auth.uid()
+  );
+
+-- =====================================================
+-- 6. CREATE PATIENT RECORDS TABLE & RLS (Anonymized)
+-- =====================================================
+
+-- Patient records table (fully anonymized)
+CREATE TABLE IF NOT EXISTS public.patient_records (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  patient_uuid uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(), -- Anonymous identifier
+  age_group text, -- e.g., '20-30', '30-40' for demographics only
+  gender text,
+  medical_history_summary jsonb, -- No identifying information
+  created_at timestamptz DEFAULT now(),
+  CONSTRAINT valid_age_group CHECK (age_group IN ('0-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70+'))
+);
+
+-- Enable RLS on patient_records
+ALTER TABLE public.patient_records ENABLE ROW LEVEL SECURITY;
+
+-- Practitioners can only view patient records they have prescriptions for
+CREATE POLICY "Practitioners can view related patient records"
+  ON public.patient_records
+  FOR SELECT
+  TO authenticated
+  USING (
+    private.practitioner_can_access_patient(id)
+  );
+
+-- =====================================================
+-- 7. CREATE PERFORMANCE INDEXES
+-- =====================================================
+
+-- Critical performance indexes for <150ms P95 target
+CREATE INDEX IF NOT EXISTS idx_prescriptions_practitioner_id 
+  ON public.prescriptions(practitioner_id);
+
+CREATE INDEX IF NOT EXISTS idx_prescriptions_status 
+  ON public.prescriptions(status);
+
+CREATE INDEX IF NOT EXISTS idx_prescription_items_prescription_id 
+  ON public.prescription_items(prescription_id);
+
+CREATE INDEX IF NOT EXISTS idx_revenue_transactions_practitioner_id 
+  ON public.revenue_transactions(practitioner_id);
+
+CREATE INDEX IF NOT EXISTS idx_consultation_notes_practitioner_prescription 
+  ON public.consultation_notes(practitioner_id, prescription_id);
+
+CREATE INDEX IF NOT EXISTS idx_patient_records_uuid 
+  ON public.patient_records(patient_uuid);
+
+-- =====================================================
+-- 8. CREATE AUDIT LOG TABLE (Medical Compliance)
+-- =====================================================
+
+-- Audit log for practitioner actions (HIPAA compliance)
+CREATE TABLE IF NOT EXISTS private.practitioner_audit_log (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  practitioner_id uuid NOT NULL,
+  action text NOT NULL,
+  table_name text NOT NULL,
+  record_id uuid,
+  changes jsonb,
+  ip_address inet,
+  user_agent text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Index for audit queries
+CREATE INDEX IF NOT EXISTS idx_audit_practitioner_id_created 
+  ON private.practitioner_audit_log(practitioner_id, created_at DESC);
+
+-- =====================================================
+-- 9. ADMIN EMERGENCY ACCESS POLICIES
+-- =====================================================
+
+-- Allow admin to view prescriptions for compliance/support
+CREATE POLICY "Admin can view all prescriptions"
+  ON public.prescriptions
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role = 'admin'
+        AND status = 'active'
+    )
+  );
+
+-- Admin policies for other tables (similar pattern)
+CREATE POLICY "Admin can view all prescription items"
+  ON public.prescription_items
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role = 'admin'
+        AND status = 'active'
+    )
+  );
+
+-- =====================================================
+-- 10. GRANT PERMISSIONS
+-- =====================================================
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.get_current_practitioner_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION private.practitioner_owns_prescription(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION private.practitioner_can_access_patient(uuid) TO authenticated;
+
+-- Grant table permissions
+GRANT ALL ON public.prescriptions TO authenticated;
+GRANT ALL ON public.prescription_items TO authenticated;
+GRANT SELECT ON public.revenue_transactions TO authenticated;
+GRANT ALL ON public.consultation_notes TO authenticated;
+GRANT SELECT ON public.patient_records TO authenticated;
+
+-- =====================================================
+-- 11. MEDICAL COMPLIANCE FUNCTIONS
+-- =====================================================
+
+-- Function to detect and prevent PII storage
+CREATE OR REPLACE FUNCTION private.check_no_pii()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Check for common PII patterns
+  IF NEW.notes_encrypted ~ '\d{3}-\d{2}-\d{4}' OR  -- SSN pattern
+     NEW.notes_encrypted ~ '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b' OR  -- Email
+     NEW.notes_encrypted ~ '\b\d{10,11}\b' THEN  -- Phone number
+    RAISE EXCEPTION 'PII detected in consultation notes - storage blocked for HIPAA compliance';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- Apply PII check trigger to consultation notes
+DROP TRIGGER IF EXISTS check_consultation_notes_pii ON public.consultation_notes;
+CREATE TRIGGER check_consultation_notes_pii
+  BEFORE INSERT OR UPDATE ON public.consultation_notes
+  FOR EACH ROW
+  EXECUTE FUNCTION private.check_no_pii();
+
+-- =====================================================
+-- 12. COMMENTS FOR DOCUMENTATION
+-- =====================================================
+
+COMMENT ON TABLE public.prescriptions IS 'TCM prescriptions with complete practitioner isolation';
+COMMENT ON TABLE public.prescription_items IS 'Individual herbs/items in a prescription';
+COMMENT ON TABLE public.revenue_transactions IS 'Practitioner revenue tracking with strict isolation';
+COMMENT ON TABLE public.consultation_notes IS 'Private consultation records with encryption';
+COMMENT ON TABLE public.patient_records IS 'Fully anonymized patient records - zero PII';
+COMMENT ON FUNCTION private.get_current_practitioner_id() IS 'Optimized function to verify active TCM practitioner';
+COMMENT ON FUNCTION private.practitioner_owns_prescription(uuid) IS 'Verify prescription ownership for RLS';
+COMMENT ON FUNCTION private.practitioner_can_access_patient(uuid) IS 'Check patient record access through prescriptions';
