@@ -1,0 +1,53 @@
+{
+  "name": "prescription-platform-backend",
+  "version": "1.0.0",
+  "description": "B2B2C Traditional Chinese Medicine Prescription Fulfillment Platform - Backend",
+  "private": true,
+  "scripts": {
+    "lint": "eslint 'supabase/functions/**/*.{ts,tsx}' --max-warnings 0",
+    "lint:fix": "eslint 'supabase/functions/**/*.{ts,tsx}' --fix",
+    "type-check": "tsc --noEmit",
+    "test": "npm run test:db && npm run test:functions",
+    "test:db": "npm run test:migrations && npm run test:rls && npm run test:jwt",
+    "test:migrations": "supabase db reset --local",
+    "test:rls": "psql postgresql://postgres:postgres@localhost:54322/postgres -f tests/rls/test-user-profiles-rls.sql",
+    "test:jwt": "psql postgresql://postgres:postgres@localhost:54322/postgres -f tests/test-jwt-claims.sql",
+    "test:functions": "echo 'Note: Deno required for Edge Function tests. Install from https://deno.land'",
+    "db:reset": "supabase db reset --local",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff",
+    "types:generate": "supabase gen types typescript --local > types/database.types.ts",
+    "functions:serve": "supabase functions serve",
+    "functions:deploy": "supabase functions deploy",
+    "ci:check": "./scripts/api-consistency-checker.sh && ./scripts/prp-boundary-validator.sh",
+    "ci:full": "npm run ci:check && npm run lint && npm run type-check && npm run test"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@types/node": "^20.11.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/prescription-platform-backend.git"
+  },
+  "keywords": [
+    "supabase",
+    "postgresql",
+    "backend",
+    "tcm",
+    "healthcare",
+    "prescription"
+  ],
+  "author": "Backend Lead",
+  "license": "UNLICENSED"
+}

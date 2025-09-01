@@ -1,0 +1,36 @@
+{
+  "imports": {
+    "@/": "./lib/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.0",
+    "zod": "https://deno.land/x/zod@v3.22.4/mod.ts"
+  },
+  "tasks": {
+    "test": "deno test --allow-all",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "https://esm.sh/react@18"
+  },
+  "lint": {
+    "include": ["./**/*.ts"],
+    "exclude": ["./types/**/*.ts"],
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["ban-untagged-todo"],
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "fmt": {
+    "include": ["./**/*.ts"],
+    "exclude": ["./types/**/*.ts"],
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true,
+      "proseWrap": "preserve"
+    }
+  }
+}

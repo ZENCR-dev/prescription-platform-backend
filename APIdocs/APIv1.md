@@ -677,6 +677,121 @@ Authentication_Business_Logic:
       Medium: "Additional verification prompt"
       High: "Force re-authentication with MFA"
 
+Registration_Validation_Service:
+  Function_Name: "registration-validator"
+  Endpoint: "/functions/v1/registration-validator"
+  Purpose: "Validate role-specific registration requirements before account creation"
+  
+  Request_Structure:
+    Method: POST
+    Headers:
+      Authorization: "Bearer {anon_key}"
+      Content-Type: "application/json"
+    Body:
+      role: enum ["tcm_practitioner", "pharmacy", "admin"] (required)
+      data: object (role-specific fields)
+  
+  TCM_Practitioner_Validation:
+    Required_Fields:
+      email: "Valid email format"
+      password: "Min 12 chars with uppercase, lowercase, number, symbol"
+      full_name: "2-100 characters"
+      phone: "International format +[country][number]"
+      license_number: "Format: TCM-XXXXXX (6 digits)"
+      license_expiry: "ISO datetime, minimum 30 days future"
+      years_of_practice: "Number 0-70"
+    Optional_Fields:
+      clinic_name: "2-200 characters"
+      clinic_address: "10-500 characters"
+      specializations: "Array, max 10 items"
+    
+  Pharmacy_Validation:
+    Required_Fields:
+      email: "Valid email format"
+      password: "Min 12 chars with complexity requirements"
+      pharmacy_name: "2-200 characters"
+      business_registration: "5-50 characters"
+      pharmacy_license: "Format: PHARM-XXXXXX (6 digits)"
+      license_expiry: "ISO datetime, minimum 30 days future"
+      address: "10-500 characters"
+      contact_phone: "International format"
+      contact_person: "2-100 characters"
+    Optional_Fields:
+      operating_hours: "Valid JSON string"
+      delivery_available: "Boolean"
+  
+  Admin_Validation:
+    Required_Fields:
+      email: "Must be @platform.com domain"
+      password: "Min 16 chars with enhanced complexity"
+      full_name: "2-100 characters"
+      phone: "International format with country code"
+      department: enum ["operations", "finance", "support", "compliance"]
+      access_level: enum ["full", "limited", "readonly"]
+      mfa_required: "Must be true"
+    Conditional_Fields:
+      supervisor_email: "Required for limited/readonly access levels"
+  
+  Response_Formats:
+    Success_Response:
+      status: 200
+      body:
+        success: true
+        data:
+          validated: true
+          role: string
+          message: "Registration data validated successfully"
+        timestamp: ISO8601
+    
+    Validation_Error:
+      status: 400
+      body:
+        success: false
+        error:
+          code: string
+          message: string
+          field: string (optional)
+          details:
+            requirement: string
+            received: string
+        timestamp: ISO8601
+    
+    Email_Conflict:
+      status: 409
+      body:
+        success: false
+        error:
+          code: "EMAIL_EXISTS"
+          message: "This email is already registered"
+          field: "email"
+        timestamp: ISO8601
+  
+  Error_Codes:
+    INVALID_EMAIL: "Email format invalid"
+    EMAIL_EXISTS: "Email already registered"
+    WEAK_PASSWORD: "Password doesn't meet requirements"
+    INVALID_LICENSE: "License format or expiry invalid"
+    INVALID_PHONE: "Phone number format invalid"
+    INVALID_DOMAIN: "Admin email domain not allowed"
+    MISSING_FIELD: "Required field missing"
+    INVALID_ROLE: "Role type not recognized"
+    VALIDATION_ERROR: "General validation failure"
+    INTERNAL_ERROR: "Server error"
+  
+  Performance_Requirements:
+    Response_Time: "< 500ms P95"
+    Validation_Time: "< 100ms for schema validation"
+    Database_Lookup: "< 200ms for email existence check"
+    Total_Processing: "< 400ms including all validations"
+  
+  Security_Considerations:
+    Rate_Limiting: "10 requests per minute per IP"
+    Input_Sanitization: "All inputs sanitized before processing"
+    SQL_Injection_Prevention: "Parameterized queries only"
+    Service_Role_Key: "Never exposed in response or logs"
+    Audit_Logging: "All validation attempts logged (anonymized)"
+    CORS: "Restricted to allowed origins only"
+
 Edge_Functions_Configuration:
   Local_Development:
     Command: "supabase functions serve"
