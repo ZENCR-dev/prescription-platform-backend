@@ -453,63 +453,92 @@ POST /rest/v1/profiles/avatar:
   Storage_Policy: "User-specific folder structure in Supabase Storage"
 ```
 
-## **🛡️ License Verification API (M1.5)**
+## **🛡️ License Verification API (M1.1)**
 
-### **Professional License Verification Workflow**
+### **Professional License Verification Workflow (Edge Function Implementation)**
 
 ```yaml
-POST /rest/v1/verification/license:
-  Description: Submit professional license and business verification documents
+POST /functions/v1/license-verification:
+  Description: Submit professional license for verification via Edge Function workflow
   Authentication: Bearer token (tcm_practitioner or pharmacy role required)
   Request_Headers:
-    Authorization: "Bearer {access_token}"
-    Content-Type: "multipart/form-data"
+    Authorization: "Bearer {anon_key}"
+    Content-Type: "application/json"
   Request_Body:
-    license_number: string (required)
-    license_type: enum ["tcm_practitioner", "pharmacy_license"] (required)
-    license_document: file (required, PDF/JPG/PNG, max 10MB)
-    business_registration: file (optional, PDF/JPG/PNG, max 10MB)
-    additional_certifications: array (optional)
-      - file: file
-      - description: string
-  Response_Success:
-    status: 201
-    data:
-      verification_id: uuid
-      status: "pending"
-      submitted_at: timestamp
-      expected_review_time: string
-  Response_Error:
-    status: 422
-    error:
-      message: "Document validation failed"
-      details: array
-  RLS_Enforcement: "user_id = auth.uid()"
-  Zero_PII: "Professional credentials only, no patient data"
-
-GET /rest/v1/verification/status:
-  Description: Check current user's verification status
-  Authentication: Bearer token (authenticated role required)
-  Request_Headers:
-    Authorization: "Bearer {access_token}"
+    type: enum ["tcm_practitioner", "pharmacy"] (required)
+    license_number: string (required, format: TCM-XXXXXX or PHARM-XXXXXX)
+    license_expiry: string (required, ISO 8601 date, min 30 days future)
+    user_id: uuid (optional, defaults to auth.uid())
+    additional_info: object (optional)
+      practitioner_name: string (optional)
+      clinic_name: string (optional)
+      pharmacy_name: string (optional)
+      business_registration: string (optional)
   Response_Success:
     status: 200
+    success: true
     data:
-      verification_id: uuid
-      status: enum ["pending", "under_review", "verified", "rejected", "requires_additional_info"]
+      verification_id: string (format: ver_timestamp_random)
+      type: string
+      license_number: string
+      status: enum ["pending", "verifying", "verified", "rejected"]
       submitted_at: timestamp
-      reviewed_at: timestamp (if applicable)
-      verification_notes: string (if rejected or requires info)
-      verified_credentials:
-        license_number: string
-        license_type: string
-        verification_date: timestamp
+      verified_at: timestamp (if verified)
+      rejected_at: timestamp (if rejected)
+      rejection_reason: string (if rejected)
+    timestamp: timestamp
+  Response_Error:
+    status: 400
+    success: false
+    error:
+      code: enum ["VALIDATION_ERROR", "EXPIRED_LICENSE", "INVALID_LICENSE_FORMAT"]
+      message: string
+      field: string (optional, field that failed validation)
+    timestamp: timestamp
+  State_Machine: "pending → verifying → verified/rejected"
+  Mock_Verification_Rules:
+    TCM_Approved: "TCM-1XXXXX range"
+    TCM_Rejected: "TCM-9XXXXX range"
+    Pharmacy_Approved: "PHARM-2XXXXX range"
+    Pharmacy_Rejected: "PHARM-8XXXXX range"
+  RLS_Enforcement: "Service role only for writes, users can SELECT own records"
+  HIPAA_Compliance: "Zero PII in logs, professional credentials only"
+
+GET /functions/v1/license-verification?verification_id={id}:
+  Description: Check verification status by ID
+  Authentication: Bearer token (authenticated role required)
+  Request_Headers:
+    Authorization: "Bearer {anon_key}"
+  Response_Success:
+    status: 200
+    success: true
+    data:
+      verification_id: string
+      type: string
+      license_number: string
+      status: enum ["pending", "verifying", "verified", "rejected"]
+      submitted_at: timestamp
+      verified_at: timestamp (if applicable)
+      rejected_at: timestamp (if applicable)
+      rejection_reason: string (if rejected)
+      user_id: uuid
+    timestamp: timestamp
   Response_Error:
     status: 404
+    success: false
     error:
-      message: "No verification record found"
-  RLS_Enforcement: "user_id = auth.uid()"
-  Privacy_Compliance: "Professional verification only"
+      code: "NOT_FOUND"
+      message: "Verification record not found"
+    timestamp: timestamp
+  RLS_Enforcement: "Users can only view their own records via RLS policies"
+  Privacy_Compliance: "Professional verification only, no patient data"
+
+# Legacy REST Endpoints (Planned, Not Currently Implemented)
+# Note: The following endpoints are planned for future REST API implementation
+# but are NOT currently available. Use the Edge Function endpoints above.
+
+POST /rest/v1/verification/license: "(Planned - Not Implemented)"
+GET /rest/v1/verification/status: "(Planned - Not Implemented)"
 ```
 
 ## **🔐 Multi-Factor Authentication API (M1.6)**
