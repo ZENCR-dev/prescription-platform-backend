@@ -644,6 +644,71 @@ Edge_Functions_Auth_Integration:
         - pharmacy-invitation.html
         - admin-security-alert.html
 
+  License_Verification_Workflow:
+    Purpose: "State-managed license verification for TCM practitioners and pharmacies"
+    Endpoint: "/functions/v1/license-verification"
+    Methods: ["POST", "GET"]
+    State_Transitions: "pending → verifying → verified/rejected"
+    
+    POST_Request:
+      Description: "Submit new license verification request"
+      Request_Body:
+        type: "tcm_practitioner | pharmacy"
+        license_number: "TCM-XXXXXX | PHARM-XXXXXX"
+        license_expiry: "ISO 8601 datetime (must be >30 days future)"
+        user_id?: "UUID (optional)"
+        additional_info?:
+          practitioner_name?: "string (TCM only)"
+          clinic_name?: "string (TCM only)"
+          pharmacy_name?: "string (Pharmacy only)"
+          business_registration?: "string (Pharmacy only)"
+      
+      Response_Success:
+        success: true
+        data:
+          verification_id: "ver_timestamp_random"
+          type: "tcm_practitioner | pharmacy"
+          license_number: "string"
+          status: "pending | verifying | verified | rejected"
+          submitted_at: "ISO 8601"
+          verified_at?: "ISO 8601"
+          rejection_reason?: "string"
+          verification_details:
+            expiry_date: "ISO 8601"
+            issuing_authority?: "string"
+            verification_method?: "string"
+        timestamp: "ISO 8601"
+      
+      Response_Error:
+        success: false
+        error:
+          code: "VALIDATION_ERROR | INTERNAL_ERROR | STATE_ERROR"
+          message: "string"
+          field?: "string"
+          details?: "object"
+        timestamp: "ISO 8601"
+    
+    GET_Request:
+      Description: "Check verification status"
+      Query_Parameters:
+        verification_id: "string (required)"
+      
+      Response_Success: "Same as POST Response_Success"
+      Response_Error:
+        404: "Verification not found"
+        400: "Invalid verification_id"
+        500: "Internal server error"
+    
+    Mock_Verification_Rules:
+      TCM_Approved: "License numbers starting with TCM-1"
+      TCM_Rejected: "License numbers starting with TCM-9"
+      Pharmacy_Approved: "License numbers starting with PHARM-2"  
+      Pharmacy_Rejected: "License numbers starting with PHARM-8"
+    
+    Performance_Target: "< 500ms P95 response time"
+    Security: "HIPAA compliant, no PII in logs"
+    Frontend_Integration: "EdgeFunctionAdapter compatible"
+
 Authentication_Business_Logic:
   User_Registration_Validation:
     Function_Name: "validate-registration"
