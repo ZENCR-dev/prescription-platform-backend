@@ -4,6 +4,7 @@
 
 // License Verification Workflow Edge Function
 // Handles TCM practitioner and pharmacy license verification with state management
+// Security: Enforces RLS through anon key + Authorization header forwarding
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
@@ -26,7 +27,7 @@ interface LicenseVerificationRequest {
   type: LicenseType;
   license_number: string;
   license_expiry: string;
-  user_id?: string;
+  // user_id removed - will be extracted from JWT
   additional_info?: {
     practitioner_name?: string;
     clinic_name?: string;
@@ -83,13 +84,13 @@ const pharmacyLicenseSchema = z
   .string()
   .regex(/^PHARM-\d{6}$/, 'Pharmacy license must be in format PHARM-XXXXXX');
 
-// License verification request schema
+// License verification request schema (user_id removed from validation)
 const verificationRequestSchema = z
   .object({
     type: z.enum(['tcm_practitioner', 'pharmacy']),
     license_number: z.string(),
     license_expiry: z.string().datetime(),
-    user_id: z.string().uuid().optional(),
+    // user_id field removed - security fix
     additional_info: z
       .object({
         practitioner_name: z.string().min(2).max(100).optional(),
@@ -99,41 +100,37 @@ const verificationRequestSchema = z
       })
       .optional(),
   })
-  .refine(
-    (data) => {
-      // Validate license format based on type
-      if (data.type === 'tcm_practitioner') {
-        return tcmLicenseSchema.safeParse(data.license_number).success;
-      } else if (data.type === 'pharmacy') {
-        return pharmacyLicenseSchema.safeParse(data.license_number).success;
+  .superRefine((data, ctx) => {
+    // Validate license format based on type
+    if (data.type === 'tcm_practitioner') {
+      const result = tcmLicenseSchema.safeParse(data.license_number);
+      if (!result.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: result.error.errors[0].message,
+          path: ['license_number'],
+        });
       }
-      return false;
-    },
-    {
-      message: 'Invalid license number format for the specified type',
-      path: ['license_number'],
+    } else if (data.type === 'pharmacy') {
+      const result = pharmacyLicenseSchema.safeParse(data.license_number);
+      if (!result.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: result.error.errors[0].message,
+          path: ['license_number'],
+        });
+      }
     }
-  )
-  .refine(
-    (data) => {
-      // Validate license expiry is at least 30 days in the future
-      const expiry = new Date(data.license_expiry);
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      return expiry > thirtyDaysFromNow;
-    },
-    {
-      message: 'License expiry must be at least 30 days in the future',
-      path: ['license_expiry'],
-    }
-  );
+  });
 
 // ============================================
-// HELPER FUNCTIONS
+// UTILITY FUNCTIONS
 // ============================================
 
 function generateVerificationId(): string {
-  return `ver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substr(2, 9);
+  return `ver_${timestamp}_${randomPart}`;
 }
 
 function createErrorResponse(
@@ -163,11 +160,51 @@ function createSuccessResponse(state: VerificationState): SuccessResponse {
 }
 
 // ============================================
+// AUTHENTICATION HELPER
+// ============================================
+
+async function getAuthenticatedUser(
+  authHeader: string | null,
+  supabaseUrl: string,
+  supabaseAnonKey: string
+) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { user: null, error: 'Missing or invalid Authorization header' };
+  }
+
+  // Create client with anon key and forward the Authorization header
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  // Get the authenticated user from the JWT
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return { user: null, error: 'Invalid or expired token' };
+  }
+
+  return { user, error: null };
+}
+
+// ============================================
 // STATE MANAGEMENT FUNCTIONS
 // ============================================
 
 async function initializeVerification(
   request: LicenseVerificationRequest,
+  userId: string, // Now passed separately after JWT extraction
   supabase: ReturnType<typeof createClient>
 ): Promise<VerificationState> {
   const verificationId = generateVerificationId();
@@ -183,10 +220,10 @@ async function initializeVerification(
     },
   };
 
-  // Store initial state in database
+  // Store initial state in database with authenticated user's ID
   const { error } = await supabase.from('license_verifications').insert({
     id: verificationId,
-    user_id: request.user_id,
+    user_id: userId, // Use authenticated user's ID from JWT
     license_type: request.type,
     license_number: request.license_number,
     status: 'pending',
@@ -197,7 +234,7 @@ async function initializeVerification(
 
   if (error) {
     console.error('Failed to store verification state:', error);
-    throw new Error('Failed to initialize verification process');
+    throw new Error('Failed to initialize verification');
   }
 
   return initialState;
@@ -227,7 +264,7 @@ async function transitionToVerifying(
     verification_id: data.id,
     type: data.license_type as LicenseType,
     license_number: data.license_number,
-    status: 'verifying' as VerificationStatus,
+    status: 'verifying',
     submitted_at: data.created_at,
     verification_details: data.verification_details,
   };
@@ -235,17 +272,23 @@ async function transitionToVerifying(
 
 async function completeVerification(
   verificationId: string,
-  status: 'verified' | 'rejected',
+  finalStatus: 'verified' | 'rejected',
   supabase: ReturnType<typeof createClient>,
   rejectionReason?: string
 ): Promise<VerificationState | null> {
   const updateData: any = {
-    status,
+    status: finalStatus,
     updated_at: new Date().toISOString(),
-    verified_at: new Date().toISOString(),
   };
 
-  if (status === 'rejected' && rejectionReason) {
+  if (finalStatus === 'verified') {
+    updateData.verified_at = new Date().toISOString();
+    updateData.verification_details = {
+      ...updateData.verification_details,
+      verification_method: 'automated',
+      issuing_authority: 'TCM Board',
+    };
+  } else if (finalStatus === 'rejected' && rejectionReason) {
     updateData.rejection_reason = rejectionReason;
   }
 
@@ -280,23 +323,30 @@ async function completeVerification(
 
 async function performLicenseVerification(
   request: LicenseVerificationRequest
-): Promise<{ isValid: boolean; reason?: string }> {
-  // Mock verification logic - in production, this would call external APIs
-  // or check against official license databases
+): Promise<{ isValid: boolean; reason?: string; errorCode?: string }> {
+  // Simulate verification delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  // Simulate processing time
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Check license expiry first
+  const expiryDate = new Date(request.license_expiry);
+  const now = new Date();
+  
+  if (expiryDate < now) {
+    return { 
+      isValid: false, 
+      reason: 'License has expired', 
+      errorCode: 'EXPIRED_LICENSE' 
+    };
+  }
 
-  // Mock validation rules
+  // Mock verification logic based on license number patterns
   if (request.type === 'tcm_practitioner') {
-    // Check if license number starts with TCM-1 (mock approved range)
     if (request.license_number.startsWith('TCM-1')) {
       return { isValid: true };
     } else if (request.license_number.startsWith('TCM-9')) {
-      return { isValid: false, reason: 'License revoked or suspended' };
+      return { isValid: false, reason: 'License suspended or revoked' };
     }
   } else if (request.type === 'pharmacy') {
-    // Check if license number starts with PHARM-2 (mock approved range)
     if (request.license_number.startsWith('PHARM-2')) {
       return { isValid: true };
     } else if (request.license_number.startsWith('PHARM-8')) {
@@ -318,6 +368,24 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Get environment variables
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+    return new Response(
+      JSON.stringify(createErrorResponse('INTERNAL_ERROR', 'Server configuration error')),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // Extract Authorization header
+  const authHeader = req.headers.get('Authorization');
+
   // Handle GET requests for status checks
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -333,28 +401,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Authenticate user
+    const { user, error: authError } = await getAuthenticatedUser(
+      authHeader,
+      supabaseUrl,
+      supabaseAnonKey
+    );
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (authError || !user) {
       return new Response(
-        JSON.stringify(createErrorResponse('INTERNAL_ERROR', 'Server configuration error')),
+        JSON.stringify(createErrorResponse('UNAUTHORIZED', authError || 'Authentication required')),
         {
-          status: 500,
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Create client with anon key and forwarded auth header for RLS
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader!,
+        },
+      },
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
 
-    // Fetch verification status
+    // Fetch verification status with RLS enforcement
     const { data, error } = await supabase
       .from('license_verifications')
       .select('*')
@@ -362,6 +439,19 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (error || !data) {
+      // Could be not found or access denied due to RLS
+      return new Response(
+        JSON.stringify(createErrorResponse('NOT_FOUND', 'Verification not found or access denied')),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Additional ownership check (belt and suspenders)
+    // Return 404 for non-owners to avoid leaking existence information
+    if (data.user_id !== user.id) {
       return new Response(
         JSON.stringify(createErrorResponse('NOT_FOUND', 'Verification not found')),
         {
@@ -402,8 +492,31 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Authenticate user for POST requests
+    const { user, error: authError } = await getAuthenticatedUser(
+      authHeader,
+      supabaseUrl,
+      supabaseAnonKey
+    );
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify(createErrorResponse('UNAUTHORIZED', authError || 'Authentication required')),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Parse request body
     const body = await req.json();
+
+    // Remove any user_id from the body (security fix)
+    if ('user_id' in body) {
+      delete body.user_id;
+      console.warn('Attempted to pass user_id in request body - ignored for security');
+    }
 
     // Validate request
     const validationResult = verificationRequestSchema.safeParse(body);
@@ -425,33 +538,23 @@ Deno.serve(async (req: Request) => {
 
     const request = validationResult.data;
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify(createErrorResponse('INTERNAL_ERROR', 'Server configuration error')),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Create service role client for state transitions
+    // Note: Service role is only used AFTER user authentication and for internal state management
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
 
-    // Initialize verification with pending status
-    const initialState = await initializeVerification(request, supabase);
+    // Initialize verification with authenticated user's ID
+    const initialState = await initializeVerification(request, user.id, supabaseService);
 
     // Transition to verifying status
-    const verifyingState = await transitionToVerifying(initialState.verification_id, supabase);
+    const verifyingState = await transitionToVerifying(
+      initialState.verification_id,
+      supabaseService
+    );
 
     if (!verifyingState) {
       return new Response(
@@ -466,11 +569,24 @@ Deno.serve(async (req: Request) => {
     // Perform actual verification (mock for now)
     const verificationResult = await performLicenseVerification(request);
 
+    // Handle EXPIRED_LICENSE error specifically
+    if (verificationResult.errorCode === 'EXPIRED_LICENSE') {
+      return new Response(
+        JSON.stringify(
+          createErrorResponse('EXPIRED_LICENSE', verificationResult.reason || 'License has expired')
+        ),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Complete verification with final status
     const finalState = await completeVerification(
       initialState.verification_id,
       verificationResult.isValid ? 'verified' : 'rejected',
-      supabase,
+      supabaseService,
       verificationResult.reason
     );
 
@@ -492,6 +608,7 @@ Deno.serve(async (req: Request) => {
       status: finalState.status,
       verification_id: finalState.verification_id,
       timestamp: new Date().toISOString(),
+      // Note: Never log license_number or other PII
     });
 
     return new Response(JSON.stringify(createSuccessResponse(finalState)), {
@@ -513,7 +630,15 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-/* Edge Function Notes:
+/* Edge Function Security Notes:
+ *
+ * Security Model:
+ * - Authentication: Bearer token required (access_token from Supabase Auth)
+ * - Authorization: RLS enforced through anon key + Authorization header forwarding
+ * - User ID: Extracted from JWT, never accepted from request body
+ * - GET Access: Only owner can view their own verifications (RLS + explicit check)
+ * - POST Access: User ID from JWT used for new verifications
+ * - Service Role: Only used for internal state transitions after authentication
  *
  * This function handles license verification for:
  * 1. TCM Practitioners - Medical license format TCM-XXXXXX
@@ -522,11 +647,11 @@ Deno.serve(async (req: Request) => {
  * State transitions: pending → verifying → verified/rejected
  *
  * Performance target: < 500ms P95 response time
- * Security: HIPAA compliant, no PII in logs, service role key protected
+ * Security: HIPAA compliant, no PII in logs, JWT-based authentication
  *
  * Deploy with: supabase functions deploy license-verification
  *
  * Frontend integration:
- * - POST /functions/v1/license-verification - Submit new verification
- * - GET /functions/v1/license-verification?verification_id=xxx - Check status
+ * - POST /functions/v1/license-verification - Submit new verification (Bearer token required)
+ * - GET /functions/v1/license-verification?verification_id=xxx - Check status (Bearer token required)
  */

@@ -462,13 +462,13 @@ POST /functions/v1/license-verification:
   Description: Submit professional license for verification via Edge Function workflow
   Authentication: Bearer token (tcm_practitioner or pharmacy role required)
   Request_Headers:
-    Authorization: "Bearer {anon_key}"
+    Authorization: "Bearer {access_token}"
     Content-Type: "application/json"
   Request_Body:
     type: enum ["tcm_practitioner", "pharmacy"] (required)
     license_number: string (required, format: TCM-XXXXXX or PHARM-XXXXXX)
     license_expiry: string (required, ISO 8601 date, min 30 days future)
-    user_id: uuid (optional, defaults to auth.uid())
+    # user_id field removed - extracted from JWT for security
     additional_info: object (optional)
       practitioner_name: string (optional)
       clinic_name: string (optional)
@@ -491,7 +491,7 @@ POST /functions/v1/license-verification:
     status: 400
     success: false
     error:
-      code: enum ["VALIDATION_ERROR", "EXPIRED_LICENSE", "INVALID_LICENSE_FORMAT"]
+      code: enum ["VALIDATION_ERROR", "EXPIRED_LICENSE", "INVALID_LICENSE_FORMAT", "STATE_ERROR", "INTERNAL_ERROR"]
       message: string
       field: string (optional, field that failed validation)
     timestamp: timestamp
@@ -501,6 +501,11 @@ POST /functions/v1/license-verification:
     TCM_Rejected: "TCM-9XXXXX range"
     Pharmacy_Approved: "PHARM-2XXXXX range"
     Pharmacy_Rejected: "PHARM-8XXXXX range"
+  Security_Rules:
+    User_ID_Source: "Extracted from JWT auth.uid(), never from request body"
+    Access_Control: "RLS enforced via anon key + Authorization header forwarding"
+    POST_Access: "User ID from JWT prevents impersonation attacks"
+    Service_Role: "Used only for internal state transitions after authentication"
   RLS_Enforcement: "Service role only for writes, users can SELECT own records"
   HIPAA_Compliance: "Zero PII in logs, professional credentials only"
 
@@ -508,7 +513,7 @@ GET /functions/v1/license-verification?verification_id={id}:
   Description: Check verification status by ID
   Authentication: Bearer token (authenticated role required)
   Request_Headers:
-    Authorization: "Bearer {anon_key}"
+    Authorization: "Bearer {access_token}"
   Response_Success:
     status: 200
     success: true
@@ -530,6 +535,11 @@ GET /functions/v1/license-verification?verification_id={id}:
       code: "NOT_FOUND"
       message: "Verification record not found"
     timestamp: timestamp
+  Security_Rules:
+    Authentication: "Bearer token required (access_token from auth)"
+    Authorization: "RLS enforced + explicit ownership validation"
+    GET_Access: "Only record owner can view (RLS + explicit ownership check)"
+    Access_Denied: "Returns 404 for unauthorized access (no information leakage)"
   RLS_Enforcement: "Users can only view their own records via RLS policies"
   Privacy_Compliance: "Professional verification only, no patient data"
 
@@ -630,6 +640,59 @@ DELETE /rest/v1/auth/mfa/factor/{factor_id}:
 ```
 
 ## **⚡ Edge Functions Integration**
+
+### **Session Validation with MFA (Task 3.3)**
+
+```yaml
+POST /functions/v1/validate-session:
+  Description: Validate user session with MFA requirements for sensitive operations
+  Authentication: Bearer token (any authenticated role)
+  Request_Headers:
+    Authorization: "Bearer {access_token}"
+    Content-Type: "application/json"
+  Request_Body:
+    operation_type: enum ["read_only", "profile_update", "financial", "medical", "admin"] (required)
+    resource_id: string (optional - specific resource being accessed)
+  Response_Success:
+    status: 200
+    data:
+      valid: true
+      aal_level: enum ["aal1", "aal2"]
+      user_id: uuid
+  Response_MFA_Required:
+    status: 428 (Precondition Required)
+    data:
+      valid: false
+      error: "mfa_required"
+      aal_level: "aal1"
+      details: "MFA verification required for this operation"
+  Response_MFA_Enrollment_Required:
+    status: 428
+    data:
+      valid: false
+      error: "mfa_enrollment_required"
+      details: "MFA enrollment required for this operation"
+  Response_Insufficient_Privileges:
+    status: 403
+    data:
+      valid: false
+      error: "insufficient_privileges"
+      details: "User role insufficient for this operation"
+  Response_Invalid_Token:
+    status: 401
+    data:
+      valid: false
+      error: "invalid_token"
+      details: "Missing or invalid Authorization header"
+  Security_Rules:
+    read_only: "AAL1 sufficient"
+    profile_update: "AAL2 required if MFA enrolled"
+    financial: "AAL2 always required"
+    medical: "AAL2 always required (HIPAA compliance)"
+    admin: "AAL2 mandatory + admin role required"
+  Audit_Trail: "All validation attempts logged to auth_audit_logs table"
+  Performance: "Target P95 < 50ms response time"
+```
 
 ### **Authentication Hooks & Custom Logic**
 
@@ -865,12 +928,19 @@ Registration_Validation_Service:
     EMAIL_EXISTS: "Email already registered"
     WEAK_PASSWORD: "Password doesn't meet requirements"
     INVALID_LICENSE: "License format or expiry invalid"
+    EXPIRED_LICENSE: "License has expired and cannot be verified"
+    INVALID_LICENSE_FORMAT: "License number doesn't match required format (TCM-XXXXXX or PHARM-XXXXXX)"
     INVALID_PHONE: "Phone number format invalid"
     INVALID_DOMAIN: "Admin email domain not allowed"
     MISSING_FIELD: "Required field missing"
     INVALID_ROLE: "Role type not recognized"
     VALIDATION_ERROR: "General validation failure"
+    STATE_ERROR: "Failed to transition verification state"
     INTERNAL_ERROR: "Server error"
+    NOT_FOUND: "Resource not found or access denied"
+    UNAUTHORIZED: "Authentication required"
+    FORBIDDEN: "Insufficient permissions"
+    METHOD_NOT_ALLOWED: "HTTP method not allowed"
   
   Performance_Requirements:
     Response_Time: "< 500ms P95"

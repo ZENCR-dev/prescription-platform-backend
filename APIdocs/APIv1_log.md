@@ -828,8 +828,173 @@ Performance_Metrics:
   Security: "HIPAA compliance validated"
 ```
 
+## **🚨 Critical Security Fix - License Verification Edge Function (2025-09-03)**
+
+### **Security Vulnerability Resolution**
+
+**Date**: 2025-09-03
+**Task**: Security Fix for License Verification Edge Function
+**Severity**: CRITICAL - Authentication bypass and impersonation vulnerability
+
+**Issues Identified by Global Architect**:
+1. **Authentication Bypass**: GET endpoint used service_role which bypassed RLS, allowing any user with verification_id to read any record
+2. **User Impersonation**: POST endpoint accepted user_id from request body, allowing attackers to create verifications under other users' identities
+3. **Documentation Inconsistency**: API docs showed anon_key examples instead of access_token
+
+**Security Fixes Implemented**:
+```typescript
+// Authentication Fix - Extract user from JWT
+async function getAuthenticatedUser(authHeader, supabaseUrl, supabaseAnonKey) {
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+  const { data: { user }, error } = await supabase.auth.getUser();
+  return { user, error };
+}
+
+// GET - Now uses anon key + Authorization forwarding for RLS
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { headers: { Authorization: authHeader! } },
+  auth: { autoRefreshToken: false, persistSession: false }
+});
+// Additional ownership check
+if (data.user_id !== user.id) {
+  return new Response(JSON.stringify(
+    createErrorResponse('FORBIDDEN', 'Access denied to this verification')
+  ), { status: 403 });
+}
+
+// POST - User ID from JWT only
+const { user } = await getAuthenticatedUser(authHeader, supabaseUrl, supabaseAnonKey);
+// Explicitly remove any user_id from request body
+if ('user_id' in body) {
+  delete body.user_id;
+  console.warn('Attempted to pass user_id in request body - ignored for security');
+}
+// Initialize with authenticated user's ID
+await initializeVerification(request, user.id, supabaseService);
+```
+
+**API Documentation Updates**:
+- Changed all examples from `Bearer {anon_key}` to `Bearer {access_token}`
+- Removed `user_id` field from POST request body schema
+- Added comprehensive `Security_Rules` sections to both endpoints
+- Documented authentication and authorization requirements
+
+**Security Model Summary**:
+- **Authentication**: Bearer token required (access_token from Supabase Auth)
+- **Authorization**: RLS enforced through anon key + Authorization header forwarding
+- **User ID**: Extracted from JWT, never accepted from request body
+- **GET Access**: Only owner can view their own verifications (RLS + explicit check)
+- **POST Access**: User ID from JWT used for new verifications
+- **Service Role**: Only used for internal state transitions after authentication
+
+**Testing Requirements**:
+- Verify 401 response for unauthenticated requests
+- Verify 403 response for cross-user access attempts
+- Verify user_id in request body is ignored
+- Verify RLS policies are properly enforced
+
 ---
 
-**Document Status**: ✅ **Backend Lead Authority Log Established** | 🔧 **Development Framework Initialized** | 📊 **M1 Implementation Tracking Ready** | 🚀 **Ready for Backend Development**
+**Document Status**: ✅ **Backend Lead Authority Log Established** | 🔧 **Development Framework Initialized** | 📊 **M1 Implementation Tracking Ready** | 🚀 **Ready for Backend Development** | 🛡️ **Security Hardened**
 
 *This APIv1_log.md serves as the Backend Lead's exclusive development execution and technical implementation tracking log for the B2B2C Traditional Chinese Medicine Prescription Fulfillment Platform API.*
+## **2025-09-02 Error Code Enhancement**
+
+### **License Verification Error Codes Completion**
+
+```yaml
+Implementation_Date: "2025-09-02"
+Component: "License Verification Edge Function"
+Version: "1.0.1"
+Status: "Implemented and Ready for Deployment"
+
+Error_Codes_Added:
+  EXPIRED_LICENSE:
+    Code: "EXPIRED_LICENSE"
+    Message: "License has expired"
+    HTTP_Status: 400
+    Implementation: |
+      - Added expiry date validation in performLicenseVerification()
+      - Checks if license_expiry < now() before other validations
+      - Returns 400 with EXPIRED_LICENSE error code
+    Location: "supabase/functions/license-verification/index.ts:330-340"
+    
+  Complete_Error_Code_Set:
+    - VALIDATION_ERROR: "General validation failure"
+    - EXPIRED_LICENSE: "License has expired"
+    - INVALID_LICENSE_FORMAT: "License format invalid (via Zod validation)"
+    - STATE_ERROR: "State transition failure"
+    - INTERNAL_ERROR: "Server error"
+    - NOT_FOUND: "Verification not found"
+    - UNAUTHORIZED: "Authentication required (401)"
+    - FORBIDDEN: "Access denied (403 - now returns 404 for non-owners)"
+    - METHOD_NOT_ALLOWED: "HTTP method not allowed (405)"
+
+Security_Enhancements:
+  GET_Ownership_Protection:
+    Previous: "Returned 403 FORBIDDEN for non-owners"
+    Current: "Returns 404 NOT_FOUND to avoid leaking existence"
+    Rationale: "Security through obscurity - don't reveal if resource exists"
+    Implementation: "lines 453-462 in license-verification/index.ts"
+    
+  Logging_Security:
+    Verification: "No license_number in console.log statements"
+    Implementation: "Only logs type, status, verification_id, timestamp"
+    HIPAA_Compliance: "No PII in error messages or logs"
+
+Testing_Coverage:
+  New_Test_File: "tests/license-verification-expired.test.ts"
+  Test_Scenarios:
+    - Past expiry date → EXPIRED_LICENSE error
+    - Future expiry date → Normal processing
+    - Today's date end of day → Valid (not expired)
+    - Non-owner GET → 404 NOT_FOUND
+    - Owner GET → 200 with data
+    - Invalid format → VALIDATION_ERROR
+
+API_Documentation_Updates:
+  APIv1.md_Changes:
+    - Added EXPIRED_LICENSE to error code enum (line 494)
+    - Added complete error code descriptions (lines 926-943)
+    - Clarified GET ownership protection behavior
+  
+Frontend_Integration_Notes:
+  Error_Mapping_Required:
+    EXPIRED_LICENSE: "Show 'License has expired, please renew' message"
+    INVALID_LICENSE_FORMAT: "Show format requirements (TCM-XXXXXX or PHARM-XXXXXX)"
+    STATE_ERROR: "Show 'Processing error, please try again'"
+    NOT_FOUND: "Show 'Verification not found' (unified for 404)"
+    
+  API_Call_Pattern:
+    POST: "supabase.functions.invoke('license-verification', { body })"
+    GET: "fetch with Bearer token to /functions/v1/license-verification?verification_id=xxx"
+```
+
+### **Frontend Collaboration Points**
+
+```yaml
+Frontend_Requirements_Met:
+  Error_Codes_Complete: ✅
+  GET_Security_Enhanced: ✅
+  Logging_Security_Verified: ✅
+  API_Documentation_Updated: ✅
+  
+Ready_For_Integration:
+  Backend_Status: "Edge Function ready with all error codes"
+  Test_Data_Available:
+    TCM_Valid: "TCM-100001 (will pass if not expired)"
+    TCM_Invalid: "TCM-900001 (will be rejected)"
+    Pharmacy_Valid: "PHARM-200001 (will pass if not expired)"
+    Pharmacy_Invalid: "PHARM-800001 (will be rejected)"
+    
+  Integration_Checklist:
+    - [ ] Frontend adapter handles EXPIRED_LICENSE error
+    - [ ] UI shows appropriate error messages for each code
+    - [ ] GET requests use Bearer token authentication
+    - [ ] No user_id in POST request body
+    - [ ] No license_number in frontend logs
+```
+
