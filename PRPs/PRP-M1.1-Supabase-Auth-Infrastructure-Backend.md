@@ -273,17 +273,74 @@
 - **Complexity**: Medium
 - **Implementation Focus**: Comprehensive E2E testing of complete authentication infrastructure
 
+## **Phase 4: M1.1 Closure Operations (Post-UAT Priority)**
+*Temporary high-priority closure tasks per Global Architect M1.1 收口指令*
+
+### Component 5: Post-UAT Documentation & Runtime Validation
+
+**Task 6.0: API Documentation Centralization Fix (CI Compliance)**
+- [ ] **QAD Cycle**: Research → Implement → Test → Commit
+- **Steps**: 3 (consolidate scattered API fragments to APIdocs/APIv1.md, remove frontend redundant docs, validate centralization)
+- **Files**: 38 files with API fragments + frontend docs cleanup
+- **Iterations**: 1
+- **Complexity**: Medium
+- **Implementation Focus**: Fix CI-detected API centralization violations - migrate all API fragments to single authority source
+- **Report Template**: centralization + cleanup (2 lines)
+
+**Task 6.1: API Documentation Authority Source Alignment**
+- [ ] **QAD Cycle**: Research → Implement → Test → Commit
+- **Steps**: 4 (audit APIv1.md License Verification/Validate-Session sections, update error codes/examples, ensure v2 implementation consistency, add Post-UAT closure record to APIv1_log.md)
+- **Files**: 2 (APIdocs/APIv1.md, APIdocs/APIv1_log.md)
+- **Iterations**: 1
+- **Complexity**: Low
+- **Implementation Focus**: Ensure API specifications match v2 implementation (removed GET.user_id, complete error code set, clear Security_Rules)
+- **Report Template**: commit + spec_change + log_entry (3 lines)
+
+**Task 6.2: Edge Functions Runtime Self-Check Script Suite**
+- [ ] **QAD Cycle**: Research → Implement → Test → Commit  
+- **Steps**: 4 (design non-interactive test scripts, implement quick-check-license.sh and quick-check-session.sh, validate output format, deploy to tests/edge-functions/)
+- **Files**: 2 (tests/edge-functions/quick-check-license.sh, tests/edge-functions/quick-check-session.sh)
+- **Iterations**: 1
+- **Complexity**: Low
+- **Implementation Focus**: Create automated validation scripts for license (POST_ok/POST_expired/GET_non_owner) and session (AAL1/AAL2) verification with machine-parseable output
+- **Report Template**: checks + artifacts (2 lines)
+
+**Task 6.3: Runtime Audit Security Anchors Enhancement**
+- [ ] **QAD Cycle**: Research → Implement → Test → Commit
+- **Steps**: 3 (collect RLS policy overview, document service_role internal flow, add zero-PII logging evidence with code line anchors)
+- **Files**: 1 (APIdocs/APIv1_log.md - Runtime Audit Anchors section)
+- **Iterations**: 1
+- **Complexity**: Low
+- **Implementation Focus**: Document RLS ownership + JWT verification approach, service_role usage patterns, zero-PII logging evidence from function code and test files
+- **Report Template**: audit + refs (2 lines)
+
+**Task 6.4: Monitoring Threshold Status Confirmation & Documentation**
+- [ ] **QAD Cycle**: Research → Implement → Test → Commit
+- **Steps**: 3 (confirm license-verification P95≤400ms alert status, record current performance metrics, validate dashboard link accessibility)
+- **Files**: 1 (documentation record)
+- **Iterations**: 1
+- **Complexity**: Low
+- **Implementation Focus**: Document current P95 performance values, confirm 400ms threshold alerting, provide dashboard link validation
+- **Report Template**: metrics + dashboard (2 lines)
+
+### **M1.1 Closure Priority Execution**
+**Execution Constraints**: No new Edge Functions, no RLS changes, no frontend boundary crossing
+**Quality Focus**: API centralization compliance, documentation authority source updates, script-based validation, audit anchor enhancement, monitoring confirmation
+**Deliverable**: Template-formatted reports to Global Architect for M1.1 closure completion
+**CI Compliance**: Fix 2 API centralization violations before git operations
+
 ### **EUD Summary Metrics**
 ```yaml
-Total_Atomic_Tasks: 14 (within 12-15 estimate)
+Total_Atomic_Tasks: 18 (updated with closure operations)
 Timeline_Days: 2.5 (within 2-3 day estimate)
 Complexity_Distribution:
-  Low: 5 tasks (35%)
-  Medium: 7 tasks (50%) 
-  High: 2 tasks (15%)
-Total_Files_Modified: ~22
+  Low: 7 tasks (39%)
+  Medium: 9 tasks (50%) 
+  High: 2 tasks (11%)
+Total_Files_Modified: ~60 (including API centralization)
 Average_Iterations: 1.4 per task
 Risk_Mitigation: Existing infrastructure reduces implementation risk
+CI_Compliance: API centralization fixes included
 ```
 
 ### **Implementation Progress Tracking**

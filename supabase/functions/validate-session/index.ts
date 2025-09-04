@@ -36,6 +36,7 @@ const validationRequestSchema = z.object({
   resource_id: z.string().optional(),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ValidationRequest = z.infer<typeof validationRequestSchema>;
 
 // Response types
@@ -100,11 +101,11 @@ function createErrorResponse(code: string, message: string, status: number): Res
 }
 
 async function getAuthenticatedUser(authHeader: string | null) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return { user: null, error: 'Missing or invalid Authorization header' };
   }
 
-  const token = authHeader.replace('Bearer ', '');
+  // const token = authHeader.replace('Bearer ', '');
 
   // Use Supabase client to verify JWT properly
   const supabaseUrl = Deno.env.get('SUPABASE_URL');

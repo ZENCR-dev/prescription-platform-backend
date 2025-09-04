@@ -283,6 +283,160 @@ Adjusted Backend EUD Calculation:
 
 ---
 
+## 🔗 IRG-Compliant Backend Execution Standards
+
+### Integration Readiness Gate (IRG) Framework
+
+**Definition**: IRG ensures backend modules achieve complete API contract publication, Edge Functions deployment readiness, and frontend integration verification before module completion, based on the proven M1.1/M1.2 success pattern.
+
+**Core IRG Requirements for Backend Implementation**:
+```yaml
+IRG_Mandatory_Deliverables:
+  ✅ API_Contract_Publication: "Complete API specifications updated in APIdocs/APIv1.md"
+  ✅ Edge_Functions_Deployment: "All module-related Edge Functions tested and production-ready"
+  ✅ Integration_Testing_Verified: "Backend APIs validated for Frontend EdgeFunctionAdapter consumption"
+  ✅ Global_Architect_Certification: "IRG completion status approved by Global Architect review"
+
+IRG_Quality_Baselines_M1.1_Standard:
+  Performance_Baseline: "API response <200ms P95 (M1.1 achieved <1ms as excellence reference)"
+  Security_Baseline: "Zero-PII architecture + RLS policies + HIPAA compliance (M1.1 standard)"
+  Integration_Baseline: "EdgeFunctionAdapter support + user testing coordination (M1.1 pattern)"
+  Deployment_Baseline: "Production environment stability + Edge Functions readiness (M1.1 standard)"
+```
+
+### EdgeFunctionAdapter Integration Requirements
+
+**Backend API Design for Frontend Integration**:
+```yaml
+EdgeFunctionAdapter_Compatibility_Design:
+  Standardized_Response_Format: "Consistent JSON response structure across all Edge Functions"
+  Error_Handling_Uniformity: "Standardized error codes and messages for EdgeFunctionAdapter processing"
+  Authentication_Integration: "JWT token validation and role-based response filtering"
+  Performance_Optimization: "Response caching and request optimization for adapter efficiency"
+
+API_Contract_Requirements:
+  Endpoint_Documentation: "Complete OpenAPI specifications with request/response schemas"
+  Authentication_Patterns: "Clear authentication requirements and role-based access documentation"
+  Error_Code_Standards: "Comprehensive error code definitions with recovery guidance"
+  Version_Compatibility: "API versioning support for backwards compatibility and smooth migrations"
+
+Frontend_Integration_Support:
+  Test_Data_Provision: "Reliable test data and API responses for Frontend user testing phases"
+  Cross_Browser_Compatibility: "API stability across different browser environments"
+  Real_Time_Coordination: "Support for Frontend Playwright testing and cross-browser validation"
+  User_Participation_Enablement: "Backend support for Frontend user feedback collection phases"
+```
+
+**EdgeFunctionAdapter Technical Implementation Standards**:
+```yaml
+API_Design_Patterns_for_Adapter_Layer:
+  Function_Naming_Convention: "Consistent edge function naming: {domain}-{action}-{version} (e.g., auth-verify-v1)"
+  Response_Structure_Standardization:
+    success_response: "{ success: true, data: {}, meta: { timestamp, version } }"
+    error_response: "{ success: false, error: { code, message, details }, meta: { timestamp, trace_id } }"
+  HTTP_Status_Code_Mapping: "200: Success, 400: Client Error, 401: Unauthorized, 403: Forbidden, 500: Server Error"
+
+Adapter_Layer_Compatibility_Requirements:
+  CORS_Configuration: "Edge Functions configured for cross-origin requests with allowOrigin: ['https://platform-frontend.vercel.app']"
+  Request_Validation_Standards: "Input validation using Zod schemas with comprehensive error messaging"
+  Rate_Limiting_Integration: "Consistent rate limiting headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
+  Caching_Headers_Optimization: "Cache-Control headers optimized for EdgeFunctionAdapter caching strategies"
+
+Frontend_EdgeFunctionAdapter_Integration_Protocols:
+  Authentication_Token_Handling: "JWT tokens passed via Authorization header with 'Bearer ' prefix"
+  Error_Recovery_Patterns: "Standardized retry logic with exponential backoff for 5xx errors"
+  Request_Timeout_Configuration: "30-second timeout for standard operations, 60-second for complex calculations"
+  Payload_Size_Optimization: "Request/response payloads optimized for <100KB typical, <1MB maximum"
+
+Production_Environment_EdgeFunction_Standards:
+  Environment_Variable_Management: "Secrets managed via Supabase Edge Function environment variables"
+  Logging_Standardization: "Structured JSON logging with consistent fields: timestamp, level, message, context"
+  Health_Check_Endpoints: "All Edge Functions expose /health endpoint for adapter layer monitoring"
+  Version_Management: "API versioning in URL path: /v1/, /v2/ with backward compatibility guarantees"
+```
+
+### Backend 4-Step QAD Cycle IRG Integration
+
+**Enhanced QAD Cycle with IRG Validation**:
+```yaml
+Step_1_Research_Design_IRG_Enhanced:
+  MCP_Integration_Research: "Use Context7 for backend patterns, Sequential for complex analysis"
+  EdgeFunctionAdapter_Pattern_Study: "Research frontend integration requirements and API design patterns"
+  Performance_Security_Planning: "Plan for M1.1 performance baseline and security compliance"
+  Integration_Requirements_Analysis: "Analyze frontend integration needs and user testing support requirements"
+
+Step_2_Implement_Validate_IRG_Enhanced:
+  Supabase_Native_Implementation: "Use Supabase native features before custom Edge Functions"
+  API_Contract_Development: "Develop APIs with EdgeFunctionAdapter compatibility from start"
+  Security_Compliance_Implementation: "Implement Zero-PII architecture and RLS policies"
+  Integration_Testing_Preparation: "Prepare APIs for frontend integration testing phases"
+
+Step_3_Test_Optimize_IRG_Enhanced:
+  Backend_API_Testing: "Comprehensive API testing including Edge Functions and database operations"
+  Integration_Readiness_Testing: "Validate API compatibility with EdgeFunctionAdapter patterns"
+  Performance_Baseline_Validation: "Ensure APIs meet M1.1 performance standards"
+  Security_Compliance_Verification: "Validate Zero-PII architecture and HIPAA compliance"
+
+Step_4_Commit_Update_IRG_Enhanced:
+  API_Documentation_Update: "Update APIdocs/APIv1.md with complete API specifications"
+  IRG_Completion_Reporting: "Report IRG readiness status to Global Architect for certification"
+  Integration_Status_Documentation: "Document frontend integration readiness and testing support"
+  Quality_Gate_Completion: "Complete Module Exit Criteria including IRG requirements"
+```
+
+### IRG Module Exit Criteria (MEM) Enhancement
+
+**IRG-Enhanced MEM Requirements**:
+```yaml
+Traditional_MEM_Requirements:
+  ✅ All_Components_Tested: "All backend components tested and validated"
+  ✅ API_Contracts_Implemented: "API contracts implemented and documented" 
+  ✅ Security_Compliance_Satisfied: "Security and compliance requirements satisfied"
+  ✅ Documentation_Updated: "Documentation updated and reviewed"
+
+IRG_Additional_Requirements:
+  ✅ EdgeFunctionAdapter_Compatibility: "APIs designed for frontend EdgeFunctionAdapter integration"
+  ✅ User_Testing_Support_Ready: "Backend provides stable support for Frontend user participation phases"
+  ✅ Cross_Browser_API_Stability: "API responses validated for cross-browser frontend integration"
+  ✅ Global_Architect_IRG_Certification: "IRG completion status certified by Global Architect review"
+
+Integration_Quality_Validation:
+  ✅ API_Response_Performance: "All endpoints meet M1.1 performance baseline (<200ms P95)"
+  ✅ Zero_PII_Architecture_Verified: "Patient anonymity architecture confirmed at API level"
+  ✅ Frontend_Integration_Tested: "Backend APIs tested for EdgeFunctionAdapter consumption patterns"
+  ✅ Production_Environment_Ready: "Edge Functions deployed to production environment"
+
+Cross_Browser_API_Stability_Validation_Protocols:
+  ✅ CORS_Headers_Validation: "All Edge Functions return consistent CORS headers across browser engines"
+  ✅ Content_Type_Enforcement: "application/json Content-Type header consistently returned for JSON APIs"
+  ✅ HTTP_Status_Code_Consistency: "Standard HTTP status codes returned uniformly across Chrome/Firefox/Safari/Edge"
+  ✅ Authentication_Header_Compatibility: "Authorization Bearer token handling validated across browser implementations"
+  ✅ Request_Method_Support: "GET/POST/PUT/DELETE methods validated across all target browsers"
+  ✅ Response_Header_Standards: "Cache-Control, X-RateLimit-*, and custom headers validated for browser compatibility"
+  ✅ WebSocket_Connection_Stability: "Supabase Realtime connections validated across browser WebSocket implementations"
+  ✅ Error_Response_Uniformity: "Error response format and status codes consistent across different browser contexts"
+```
+
+### Backend IRG Workflow Integration
+
+**IRG Integration with Backend Development Lifecycle**:
+```yaml
+Pre_Development_IRG_Planning:
+  PRP_Reception_Analysis: "Analyze PRP requirements for IRG compliance needs"
+  Integration_Requirements_Identification: "Identify frontend integration needs and API design requirements"
+  Performance_Security_Target_Setting: "Set performance and security targets based on M1.1 baseline"
+
+During_Development_IRG_Monitoring:
+  API_Contract_Continuous_Updates: "Maintain real-time APIdocs/APIv1.md updates during development"
+  Edge_Functions_Testing: "Continuous testing of Edge Functions for production readiness"
+  Integration_Compatibility_Validation: "Regular validation of EdgeFunctionAdapter compatibility"
+
+Post_Development_IRG_Completion:
+  Global_Architect_Review_Preparation: "Prepare comprehensive IRG documentation for review"
+  Frontend_Handoff_Coordination: "Coordinate with Global Architect for frontend API distribution"
+  Integration_Readiness_Certification: "Obtain IRG completion certification for module completion"
+```
+
 ## 🔧 Backend Execution Standards
 
 ### Branch Naming Convention (Unified Standard)
@@ -326,13 +480,15 @@ Prohibited Technologies:
 
 ## 🛡️ Compliance and Validation Framework
 
-### Quality Gates (Embedded Global Framework)
+### Quality Gates (IRG-Enhanced Framework)
 ```yaml
 Pre-Implementation Quality Gates:
   - PRP received from Global Architect ✓
   - Supabase infrastructure requirements validated ✓
   - Database schema designed with zero-PII compliance ✓
   - API contract architecture aligned with business requirements ✓
+  - IRG requirements analysis completed based on M1.1/M1.2 standard ✓
+  - EdgeFunctionAdapter compatibility requirements identified ✓
 
 Implementation Validation Gates:
   - 4-Step QAD Cycle completed for all components ✓
@@ -340,12 +496,25 @@ Implementation Validation Gates:
   - Edge Functions development with business logic validation ✓
   - APIdocs/APIv1.md updated with comprehensive API specifications ✓
   - Zero-PII compliance verified at database and API layers ✓
+  - EdgeFunctionAdapter compatibility implemented and tested ✓
+  - Frontend integration support prepared and validated ✓
+
+IRG-Specific Validation Gates:
+  - API contract publication completed in APIdocs/APIv1.md ✓
+  - Edge Functions deployed to production environment ✓
+  - Backend APIs tested for Frontend EdgeFunctionAdapter consumption ✓
+  - Performance baseline achieved (M1.1 standard: <200ms P95) ✓
+  - Cross-browser API stability validated ✓
+  - User testing support infrastructure prepared ✓
+  - Global Architect IRG certification obtained ✓
 
 Pre-Commit Validation Gates:
   - Backend boundary validation passed ✓
   - API documentation completeness verified ✓
+  - IRG completion status validated ✓
   - All quality gates completed successfully ✓
   - Database testing coverage >90% achieved ✓
+  - Frontend integration readiness confirmed ✓
 ```
 
 ### Medical Platform Compliance Requirements

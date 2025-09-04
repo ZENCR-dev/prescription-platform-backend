@@ -144,7 +144,7 @@ function getUserRole(user: EmailTemplateRequest['user']): string {
 function getEmailTemplate(userRole: string, emailActionType: string): EmailTemplateConfig {
   const roleTemplates = EMAIL_TEMPLATES[userRole];
 
-  if (roleTemplates && roleTemplates[emailActionType]) {
+  if (roleTemplates?.[emailActionType]) {
     return roleTemplates[emailActionType];
   }
 

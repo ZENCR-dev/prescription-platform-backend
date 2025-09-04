@@ -80,23 +80,29 @@ DECLARE
     test_user_id UUID := gen_random_uuid();
     profile_count INTEGER;
 BEGIN
-    -- Insert test user profile with tcm_practitioner role
-    INSERT INTO user_profiles (id, role, status, business_info) 
-    VALUES (test_user_id, 'tcm_practitioner', 'active', '{"business_name": "Test Clinic"}');
+    -- Clean up any existing test user
+    DELETE FROM user_profiles WHERE id = test_user_id;
+    DELETE FROM auth.users WHERE id = test_user_id;
     
-    -- Verify the profile was created
+    -- Insert into auth.users with metadata (trigger will auto-create profile)
+    INSERT INTO auth.users (id, email, created_at, updated_at, email_confirmed_at, raw_user_meta_data)
+    VALUES (test_user_id, 'test@example.com', NOW(), NOW(), NOW(), 
+            '{"role": "tcm_practitioner", "business_info": {"business_name": "Test Clinic"}}');
+    
+    -- Verify the profile was auto-created by trigger
     SELECT COUNT(*) INTO profile_count 
     FROM user_profiles 
     WHERE id = test_user_id AND role = 'tcm_practitioner';
     
     IF profile_count = 1 THEN
-        RAISE NOTICE 'PASS: Test user profile created successfully with tcm_practitioner role';
+        RAISE NOTICE 'PASS: handle_new_user trigger auto-created profile with tcm_practitioner role';
     ELSE
-        RAISE EXCEPTION 'FAIL: Test user profile not created correctly';
+        RAISE EXCEPTION 'FAIL: handle_new_user trigger did not create profile correctly';
     END IF;
     
     -- Clean up test data
     DELETE FROM user_profiles WHERE id = test_user_id;
+    DELETE FROM auth.users WHERE id = test_user_id;
     RAISE NOTICE 'Test data cleaned up';
 END $$;
 
@@ -153,7 +159,10 @@ BEGIN
     END IF;
 END $$;
 
-RAISE NOTICE '=== JWT Claims Test Summary ===';
-RAISE NOTICE 'All database structure tests completed';
-RAISE NOTICE 'Next: Test Edge Function deployment with `supabase functions deploy custom-access-token`';
-RAISE NOTICE 'Then: Test JWT token generation with actual auth flow';
+DO $$
+BEGIN
+    RAISE NOTICE '=== JWT Claims Test Summary ===';
+    RAISE NOTICE 'All database structure tests completed';
+    RAISE NOTICE 'Next: Test Edge Function deployment with `supabase functions deploy custom-access-token`';
+    RAISE NOTICE 'Then: Test JWT token generation with actual auth flow';
+END $$;

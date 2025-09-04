@@ -19,23 +19,43 @@ DELETE FROM user_profiles WHERE id IN (
   '44444444-4444-4444-4444-444444444444'
 );
 
--- Insert test user profiles for different roles
-INSERT INTO user_profiles (id, role, status, business_info, created_at) VALUES
+-- Clean up auth.users test data
+DELETE FROM auth.users WHERE id IN (
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222', 
+  '33333333-3333-3333-3333-333333333333',
+  '44444444-4444-4444-4444-444444444444'
+);
+
+-- Clean up test pharmacy
+DELETE FROM pharmacies WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+-- Create test pharmacy for pharmacy user
+INSERT INTO pharmacies (id, name, status, contact_info, created_at) VALUES
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Test Pharmacy Ltd', 'active', 
+ '{"phone": "+64-9-555-0123", "address": "123 Test St, Auckland"}', NOW() - INTERVAL '3 days');
+
+-- Insert auth.users with metadata (trigger will auto-create profiles)
+INSERT INTO auth.users (id, email, created_at, updated_at, email_confirmed_at, raw_user_meta_data) VALUES
 -- Test TCM Practitioner
-('11111111-1111-1111-1111-111111111111', 'tcm_practitioner', 'active', 
- '{"practice_name": "Test TCM Clinic", "license": "TCM123"}', NOW() - INTERVAL '1 day'),
-
--- Test Pharmacy Operator  
-('22222222-2222-2222-2222-222222222222', 'pharmacy', 'active',
- '{"pharmacy_name": "Test Pharmacy", "license": "PHARM456"}', NOW() - INTERVAL '2 days'),
-
--- Test Admin User
-('33333333-3333-3333-3333-333333333333', 'admin', 'active', 
- '{"admin_level": "system"}', NOW() - INTERVAL '3 days'),
-
+('11111111-1111-1111-1111-111111111111', 'tcm@test.com', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day',
+ '{"role": "tcm_practitioner", "business_info": {"practice_name": "Test TCM Clinic", "license": "TCM123"}}'),
+ 
+-- Test Pharmacy Operator (trigger creates profile with pharmacy_id)
+('22222222-2222-2222-2222-222222222222', 'pharmacy@test.com', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days',
+ '{"role": "pharmacy", "business_info": {"pharmacy_name": "Test Pharmacy", "license": "PHARM456"}, "pharmacy_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}'),
+ 
+-- Test Admin User  
+('33333333-3333-3333-3333-333333333333', 'admin@test.com', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days',
+ '{"role": "admin", "business_info": {"admin_level": "system"}}'),
+ 
 -- Test Inactive User
-('44444444-4444-4444-4444-444444444444', 'tcm_practitioner', 'inactive',
- '{"practice_name": "Inactive Clinic"}', NOW() - INTERVAL '7 days');
+('44444444-4444-4444-4444-444444444444', 'inactive@test.com', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days',
+ '{"role": "tcm_practitioner", "business_info": {"practice_name": "Inactive Clinic"}}');
+
+-- Update test users to match test requirements
+UPDATE user_profiles SET status = 'active' WHERE id = '22222222-2222-2222-2222-222222222222';
+UPDATE user_profiles SET status = 'inactive' WHERE id = '44444444-4444-4444-4444-444444444444';
 
 -- =======================
 -- TEST 1: ROLE ISOLATION VERIFICATION
@@ -93,7 +113,7 @@ GROUP BY role;
 
 -- Test 3.1: Verify all policies have explicit TO authenticated
 SELECT policyname, 
-       CASE WHEN polroles @> ARRAY[pg_authid.oid] THEN 'YES' ELSE 'NO' END as has_authenticated_role
+       CASE WHEN roles @> ARRAY[pg_authid.rolname] THEN 'YES' ELSE 'NO' END as has_authenticated_role
 FROM pg_policies 
 JOIN pg_authid ON rolname = 'authenticated'
 WHERE tablename = 'user_profiles'
@@ -123,31 +143,37 @@ SELECT private.log_admin_profile_access(
 
 -- Test 4.1: INSERT validation
 \echo 'TEST 4.1: Profile Creation Test'
--- Test valid role creation
-INSERT INTO user_profiles (id, role, status, business_info)
-VALUES ('55555555-5555-5555-5555-555555555555', 'tcm_practitioner', 'pending_verification', '{}');
+-- Test valid role creation via auth.users (trigger creates profile)
+INSERT INTO auth.users (id, email, created_at, updated_at, email_confirmed_at, raw_user_meta_data)
+VALUES ('55555555-5555-5555-5555-555555555555', 'test4@example.com', NOW(), NOW(), NOW(), 
+        '{"role": "tcm_practitioner", "business_info": {}}');
 
 -- Test invalid role rejection (should fail)
 DO $$
 BEGIN
   BEGIN
-    INSERT INTO user_profiles (id, role, status)
-    VALUES ('66666666-6666-6666-6666-666666666666', 'invalid_role', 'active');
+    -- Try to create auth.users with invalid role (should fail at profile creation)
+    INSERT INTO auth.users (id, email, created_at, updated_at, email_confirmed_at, raw_user_meta_data)
+    VALUES ('66666666-6666-6666-6666-666666666666', 'invalid@test.com', NOW(), NOW(), NOW(),
+            '{"role": "invalid_role", "business_info": {}}');
     RAISE EXCEPTION 'Should have failed: Invalid role accepted';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'PASS: Invalid role correctly rejected';
   END;
 END $$;
 
+-- Clean up test users from Test 4.1
+DELETE FROM user_profiles WHERE id IN ('55555555-5555-5555-5555-555555555555', '66666666-6666-6666-6666-666666666666');
+DELETE FROM auth.users WHERE id IN ('55555555-5555-5555-5555-555555555555', '66666666-6666-6666-6666-666666666666');
+
 -- Test 4.2: UPDATE validation  
 \echo 'TEST 4.2: Profile Update Tests'
--- Test business_info PII prevention
+-- Test business_info PII prevention (using existing test user)
 UPDATE user_profiles 
 SET business_info = '{"practice_name": "Updated Clinic"}'
-WHERE id = '55555555-5555-5555-5555-555555555555';
+WHERE id = '11111111-1111-1111-1111-111111111111';
 
--- Clean up test profile
-DELETE FROM user_profiles WHERE id = '55555555-5555-5555-5555-555555555555';
+-- No cleanup needed for existing test users
 
 -- =======================
 -- TEST 5: INDEX PERFORMANCE VERIFICATION

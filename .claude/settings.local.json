@@ -16,7 +16,10 @@
       "Bash(mv:*)",
       "Bash(/opt/homebrew/opt/libpq/bin/psql:*)",
       "Bash(grep:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(psql:*)",
+      "Bash(npx eslint:*)",
+      "Bash(./scripts/api-consistency-checker.sh:*)"
     ],
     "deny": [
       "Read(**/.env*)",

@@ -68,8 +68,6 @@ interface SuccessResponse {
   timestamp: string;
 }
 
-type VerificationResponse = VerificationError | SuccessResponse;
-
 // ============================================
 // VALIDATION SCHEMAS
 // ============================================
@@ -168,7 +166,7 @@ async function getAuthenticatedUser(
   supabaseUrl: string,
   supabaseAnonKey: string
 ) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return { user: null, error: 'Missing or invalid Authorization header' };
   }
 
@@ -330,12 +328,12 @@ async function performLicenseVerification(
   // Check license expiry first
   const expiryDate = new Date(request.license_expiry);
   const now = new Date();
-  
+
   if (expiryDate < now) {
-    return { 
-      isValid: false, 
-      reason: 'License has expired', 
-      errorCode: 'EXPIRED_LICENSE' 
+    return {
+      isValid: false,
+      reason: 'License has expired',
+      errorCode: 'EXPIRED_LICENSE',
     };
   }
 

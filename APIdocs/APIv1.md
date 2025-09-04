@@ -526,7 +526,6 @@ GET /functions/v1/license-verification?verification_id={id}:
       verified_at: timestamp (if applicable)
       rejected_at: timestamp (if applicable)
       rejection_reason: string (if rejected)
-      user_id: uuid
     timestamp: timestamp
   Response_Error:
     status: 404
