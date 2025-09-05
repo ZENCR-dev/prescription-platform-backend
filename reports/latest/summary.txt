@@ -1,0 +1,7 @@
+=== SUMMARY ===
+CI检查: 存在2项API中心化违规（详见 ci_check.log）
+Lint: 通过（0错误 0警告）
+Type Check: 通过
+npm test: 数据库迁移阶段失败（user_profiles 不存在）详见 npm-test.log
+自定义测试套件: 通过3/5（性能数据缺失；RLS合规部分项缺失）详见 custom-suite.log
+环境: 见 env.txt
