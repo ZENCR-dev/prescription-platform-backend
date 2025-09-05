@@ -37,19 +37,19 @@ BEGIN;
     -- Should succeed: valid TCM license
     INSERT INTO auth.users (id, email) VALUES ('11111111-1111-1111-1111-111111111111'::uuid, 'test1@example.com');
     INSERT INTO user_profiles (id, role, license_type, license_number) 
-    VALUES ('11111111-1111-1111-1111-111111111111'::uuid, 'practitioner', 'tcm_practitioner', 'TCM-123456');
+    VALUES ('11111111-1111-1111-1111-111111111111'::uuid, 'tcm_practitioner', 'tcm_practitioner', 'TCM-123456');
     SELECT ok(true, 'Valid TCM practitioner license accepted');
     
     -- Should succeed: valid pharmacy license  
     INSERT INTO auth.users (id, email) VALUES ('22222222-2222-2222-2222-222222222222'::uuid, 'test2@example.com');
     INSERT INTO user_profiles (id, role, license_type, license_number) 
-    VALUES ('22222222-2222-2222-2222-222222222222'::uuid, 'pharmacy_operator', 'pharmacy', 'PHARM-789012');
+    VALUES ('22222222-2222-2222-2222-222222222222'::uuid, 'pharmacy', 'pharmacy', 'PHARM-789012');
     SELECT ok(true, 'Valid pharmacy license accepted');
     
     -- Should fail: invalid license format
     SELECT throws_ok(
         $$INSERT INTO user_profiles (id, role, license_type, license_number) 
-          VALUES ('33333333-3333-3333-3333-333333333333'::uuid, 'practitioner', 'tcm_practitioner', 'INVALID-123')$$,
+          VALUES ('33333333-3333-3333-3333-333333333333'::uuid, 'tcm_practitioner', 'tcm_practitioner', 'INVALID-123')$$,
         'check_license_number_format',
         'Invalid license format rejected'
     );
@@ -57,7 +57,7 @@ BEGIN;
     -- Should fail: mismatched role and license type
     SELECT throws_ok(
         $$INSERT INTO user_profiles (id, role, license_type, license_number) 
-          VALUES ('44444444-4444-4444-4444-444444444444'::uuid, 'practitioner', 'pharmacy', 'PHARM-555555')$$,
+          VALUES ('44444444-4444-4444-4444-444444444444'::uuid, 'tcm_practitioner', 'pharmacy', 'PHARM-555555')$$,
         'check_professional_role_license', 
         'Mismatched role and license type rejected'
     );
@@ -69,7 +69,7 @@ BEGIN;
     
     -- Should succeed: valid status values
     INSERT INTO user_profiles (id, role, license_status) 
-    VALUES ('55555555-5555-5555-5555-555555555555'::uuid, 'practitioner', 'pending');
+    VALUES ('55555555-5555-5555-5555-555555555555'::uuid, 'tcm_practitioner', 'pending');
     UPDATE user_profiles SET license_status = 'verified' WHERE id = '55555555-5555-5555-5555-555555555555'::uuid;
     UPDATE user_profiles SET license_status = 'expired' WHERE id = '55555555-5555-5555-5555-555555555555'::uuid;
     UPDATE user_profiles SET license_status = 'suspended' WHERE id = '55555555-5555-5555-5555-555555555555'::uuid;
@@ -92,13 +92,13 @@ BEGIN;
     
     -- Should succeed: both verified_by and verified_at set
     INSERT INTO user_profiles (id, role, verified_by, verified_at) 
-    VALUES ('66666666-6666-6666-6666-666666666666'::uuid, 'practitioner', '77777777-7777-7777-7777-777777777777'::uuid, NOW());
+    VALUES ('66666666-6666-6666-6666-666666666666'::uuid, 'tcm_practitioner', '77777777-7777-7777-7777-777777777777'::uuid, NOW());
     SELECT ok(true, 'Verification consistency with both fields accepted');
     
     -- Should fail: only one verification field set
     SELECT throws_ok(
         $$INSERT INTO user_profiles (id, role, verified_by) 
-          VALUES ('88888888-8888-8888-8888-888888888888'::uuid, 'practitioner', '77777777-7777-7777-7777-777777777777'::uuid)$$,
+          VALUES ('88888888-8888-8888-8888-888888888888'::uuid, 'tcm_practitioner', '77777777-7777-7777-7777-777777777777'::uuid)$$,
         'check_verification_consistency',
         'Incomplete verification data rejected'
     );
@@ -130,8 +130,8 @@ BEGIN;
     
     -- Create user profiles
     INSERT INTO user_profiles (id, role, business_name) VALUES 
-        ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'practitioner', 'User 1 Clinic'),
-        ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, 'pharmacy_operator', 'User 2 Pharmacy'),
+        ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'tcm_practitioner', 'User 1 Clinic'),
+        ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, 'pharmacy', 'User 2 Pharmacy'),
         ('cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid, 'admin', 'Admin Account');
 
     -- Test 25: User can view their own profile
@@ -199,14 +199,14 @@ BEGIN;
     
     -- Should succeed: user creating their own profile
     SELECT lives_ok(
-        $$INSERT INTO user_profiles (id, role) VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid, 'practitioner')$$,
+        $$INSERT INTO user_profiles (id, role) VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid, 'tcm_practitioner')$$,
         'User can create their own profile'
     );
     
     -- Should fail: user creating profile for someone else
     INSERT INTO auth.users (id, email) VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid, 'other@example.com');
     SELECT throws_ok(
-        $$INSERT INTO user_profiles (id, role) VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid, 'practitioner')$$,
+        $$INSERT INTO user_profiles (id, role) VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid, 'tcm_practitioner')$$,
         'User cannot create profile for others'
     );
 
@@ -220,7 +220,7 @@ ROLLBACK;
 BEGIN;
     INSERT INTO auth.users (id, email) VALUES ('ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid, 'trigger@example.com');
     INSERT INTO user_profiles (id, role, license_type, license_number, license_status) 
-    VALUES ('ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid, 'practitioner', 'tcm_practitioner', 'TCM-999999', 'pending');
+    VALUES ('ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid, 'tcm_practitioner', 'tcm_practitioner', 'TCM-999999', 'pending');
 
     -- Test automatic professional_verified sync when license_status becomes 'verified'
     UPDATE user_profiles SET license_status = 'verified' WHERE id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid;
@@ -260,7 +260,7 @@ BEGIN;
     INSERT INTO user_profiles (id, role, business_address, verification_documents, compliance_flags) 
     VALUES (
         '12345678-1234-1234-1234-123456789012'::uuid, 
-        'practitioner',
+        'tcm_practitioner',
         '{"street": "123 Main St", "city": "Anytown", "state": "CA", "zip": "12345"}',
         '{"id_document": "passport_123", "business_license": "bl_456"}',
         '{"hipaa_compliant": true, "audit_enabled": true}'
@@ -321,7 +321,7 @@ SELECT * FROM finish();
 
 -- Benchmark 4: Admin management query
 -- EXPLAIN (ANALYZE, BUFFERS)
--- SELECT * FROM user_profiles WHERE role = 'practitioner' AND status = 'active' AND identity_verified = false;
+-- SELECT * FROM user_profiles WHERE role = 'tcm_practitioner' AND status = 'active' AND identity_verified = false;
 -- Expected: Index Scan using idx_user_profiles_role_status_verification
 
 -- Benchmark 5: JSONB address search
