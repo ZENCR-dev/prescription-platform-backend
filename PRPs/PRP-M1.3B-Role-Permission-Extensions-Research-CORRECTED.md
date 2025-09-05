@@ -558,10 +558,98 @@ ORDER BY proname;
 
 ---
 
-**当前状态**: 研究阶段"需修正后再评审"。未通过以上修正前，不发实施绿灯。
+## 🛠️ Implementation Phase - Post-IRG Remediation
 
-**架构师确认点**: 完成修订并通过我复核后，我会发出1.3B实施绿灯。
+**IRG Status**: ❌ **CRITICAL FAILURE** - Requires architectural remediation  
+**Defect Reference**: `Task-1.3B-IRG-DEFECTS-CRITICAL.md`  
+**Architect Directive**: Apply RLS to base `user_profiles` table, not views  
+**Remediation Approach**: EUD-driven 4 Dev-Step execution cycle
+
+### Critical Defect Summary
+1. **RLS on Views Not Supported**: PostgreSQL cannot apply RLS policies to views - fundamental architectural error
+2. **Missing Migration Dependencies**: `tcm_specialty` and `pharmacy_type` columns dependency not in chain  
+3. **Validation Script Issues**: search_path pattern mismatch causing false negatives
+
+### Architect Remediation Requirements
+Based on architect feedback, implement RLS on base `user_profiles` table with 3 cross-role policies:
+- `cross_role_pharmacy_select`: Pharmacy→TCM business access
+- `cross_role_tcm_select`: TCM→Pharmacy business access  
+- `public_directory_select`: Authenticated user public directory access
+
+### Implementation Dev-Steps
+
+#### Dev-Step 1: Migration and Rollback Scripts (Dependency Assertions)
+**Deliverable**: Corrected migration `20250905180700_rls_ext_policies_on_base_table.sql`
+**Requirements**:
+- Remove all view RLS attempts (lines 20-22 in original migration)
+- Apply RLS policies to `user_profiles` base table only
+- Add dependency assertions for `tcm_specialty` and `pharmacy_type` columns
+- Fix validation script search_path pattern matching
+- Create proper rollback script with dependency cleanup
+
+**QAD Acceptance Criteria**:
+- ✅ Migration executes successfully without PostgreSQL errors
+- ✅ Dependency assertions provide clear error messages if columns missing
+- ✅ Validation script correctly identifies function configurations
+- ✅ Rollback script cleanly removes policies and restores original state
+
+#### Dev-Step 2: Base Table Policy Implementation (System Table Verification)
+**Deliverable**: 3 RLS policies on `user_profiles` with system table validation
+**Requirements**:
+- Policy 1: `cross_role_pharmacy_select` using `private.has_prescription_business_relationship()`
+- Policy 2: `cross_role_tcm_select` using `private.has_referral_business_relationship()`  
+- Policy 3: `public_directory_select` with explicit field conditions for public access
+- Admin separate select policy (no bare authenticated access)
+- System table verification via `pg_policies` queries
+
+**QAD Acceptance Criteria**:
+- ✅ All 3 policies created with pure boolean authorization (no field filtering)
+- ✅ System table verification confirms policies exist and are correctly configured
+- ✅ Controlled views inherit security from base table automatically
+- ✅ Admin access properly segregated with dedicated policy
+
+#### Dev-Step 3: Behavioral Tests and Zero-PII Verification
+**Deliverable**: Comprehensive test suite with positive/negative/boundary cases
+**Requirements**:
+- Positive cases: Valid business relationships allow cross-role access
+- Negative cases: No relationships deny access appropriately  
+- Boundary cases: Expired relationships, edge conditions
+- Zero-PII verification: Confirm all exposed fields comply with non-PII requirements
+- Business relationship table integration testing
+
+**QAD Acceptance Criteria**:
+- ✅ All positive test cases pass (valid business access works)
+- ✅ All negative test cases pass (unauthorized access blocked)
+- ✅ Boundary conditions handled correctly (expiration, status changes)
+- ✅ Zero-PII compliance verified for all controlled view fields
+
+#### Dev-Step 4: Evidence Triplet and Remediation Report
+**Deliverable**: Complete evidence package for IRG retest
+**Requirements**:
+- Technical Evidence: System table dumps, policy configurations, migration logs
+- Behavioral Evidence: Test execution results, positive/negative case documentation
+- Compliance Evidence: Zero-PII verification report, security boundary confirmation
+- Remediation Report: Defect resolution summary, architectural changes documented
+
+**QAD Acceptance Criteria**:
+- ✅ Technical evidence demonstrates correct RLS implementation on base table
+- ✅ Behavioral evidence shows proper authorization across all scenarios  
+- ✅ Compliance evidence confirms zero-PII requirements met
+- ✅ Remediation report provides clear path for IRG retest approval
+
+### Implementation Boundary Conditions
+- **Branch Target**: All changes commit to "2025-09-05" branch only
+- **Migration Chain**: Must include dependency on `20250905160602_role_specific_profile_fields.sql`
+- **Security Model**: RLS on base table only, views inherit security automatically
+- **Testing Approach**: Use local Supabase environment, no production impact
 
 ---
 
-**Research Phase Complete (CORRECTED)**: 基于架构师反馈完成6项核心修正，建立受控视图+RLS正确架构模式。
+**当前状态**: 实施阶段 - 等待Backend Lead执行4个Dev-Step QAD循环
+
+**IRG Retest条件**: 完成全部4个Dev-Step并生成完整证据三联后，可申请IRG重新测试
+
+---
+
+**Research Phase Complete (CORRECTED)**: 基于架构师反馈完成6项核心修正，建立受控视图+RLS正确架构模式。  
+**Implementation Phase Initiated**: Dev-Step 0完成，PRP文档增补实施任务，准备QAD执行循环。
