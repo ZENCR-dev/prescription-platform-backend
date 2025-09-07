@@ -52,12 +52,12 @@ API_Foundation:
 ### **Remote Supabase Instance**
 ```yaml
 Production_Environment:
-  Project_URL: https://dosbevgbkxrtixemfjfl.supabase.co
-  Project_Reference_ID: dosbevgbkxrtixemfjfl
-  API_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/rest/v1
-  Auth_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/auth/v1
-  Realtime_Endpoint: wss://dosbevgbkxrtixemfjfl.supabase.co/realtime/v1
-  Storage_Endpoint: https://dosbevgbkxrtixemfjfl.supabase.co/storage/v1
+  Project_URL: "${NEXT_PUBLIC_SUPABASE_URL}"
+  Project_Reference_ID: "${SUPABASE_PROJECT_REF_ID}"
+  API_Endpoint: "${NEXT_PUBLIC_SUPABASE_URL}/rest/v1"
+  Auth_Endpoint: "${NEXT_PUBLIC_SUPABASE_URL}/auth/v1"
+  Realtime_Endpoint: "wss://${SUPABASE_PROJECT_REF_ID}.supabase.co/realtime/v1"
+  Storage_Endpoint: "${NEXT_PUBLIC_SUPABASE_URL}/storage/v1"
   
   Deployed_Components:
     Database_Migrations: 
@@ -95,19 +95,12 @@ M1_Core_Authentication_User_Management:
   Backend_First_Compliance: "All M1 endpoints align with implemented/planned backend functionality"
 ```
 
-**M2-M7 Planning References**
+**Future Milestone Planning**
 ```yaml
-Future_Milestones:
-  M2_Prescription_QR_System: "Prescription creation, QR code generation, patient access portals"
-  M3_Payment_Processing: "Patient payments, escrow management, transaction processing"
-  M4_Pharmacy_Fulfillment: "Order management, fulfillment tracking, quality assurance"
-  M5_Financial_Settlement: "Automated settlements, differential pricing, revenue model"
-  M6_Advanced_Features: "Enhanced dashboards, integrations, mobile optimization"
-  M7_Analytics_Market_Ready: "Business intelligence, performance optimization, market expansion"
-  
-Planning_Reference: "Complete M2-M7 API expansion strategy documented in API_Analysis_Report.md"
-Activation_Process: "Milestone-specific API contracts added to this document when backend development commences"
-Rolling_Wave_Compliance: "Detailed API planning only for immediate next milestone per SOP.md"
+Future_Development:
+  Status: "Rolling Wave Planning - Future milestones planned incrementally"
+  Reference: "Complete expansion strategy in planning documentation"
+  Activation: "Additional API contracts added when development begins"
 ```
 
 ### **Zero-PII Architecture Compliance**
@@ -700,40 +693,12 @@ Edge_Functions_Auth_Integration:
   Custom_Access_Token_Hook:
     Purpose: "Enhance JWT tokens with custom claims from user_profiles table"
     Endpoint: "/functions/v1/custom-access-token"
-    Trigger: "Before token issuance (signup, signin, refresh)"
-    Implementation:
-      Database_Query: |
-        SELECT 
-          role,
-          profile_status,
-          business_name,
-          license_number,
-          verification_status
-        FROM user_profiles 
-        WHERE user_id = $1
-      Custom_Claims_Added:
-        - role
-        - user_role (backward compatibility)
-        - profile_status
-        - business_info
-      Performance_Optimization: "Single query with idx_user_profiles_role_status index"
-      Error_Handling: "Graceful fallback to default Supabase claims"
+    Custom_Claims_Added: ["role", "user_role", "profile_status", "business_info"]
     
   Auth_Email_Template_Selector:
     Purpose: "Select role-appropriate email templates for auth flows"
     Endpoint: "/functions/v1/auth-email-template-selector"
-    Trigger: "Before email send (confirmation, recovery, invite)"
-    Implementation:
-      Template_Logic: |
-        if (user.role === 'tcm_practitioner') return 'practitioner-template'
-        if (user.role === 'pharmacy') return 'pharmacy-template'
-        if (user.role === 'admin') return 'admin-template'
-        return 'default-template'
-      Templates_Available:
-        - role-based-confirmation.html
-        - practitioner-recovery.html
-        - pharmacy-invitation.html
-        - admin-security-alert.html
+    Templates_Available: ["role-based-confirmation", "practitioner-recovery", "pharmacy-invitation"]
 
   License_Verification_Workflow:
     Purpose: "State-managed license verification for TCM practitioners and pharmacies"
@@ -741,97 +706,30 @@ Edge_Functions_Auth_Integration:
     Methods: ["POST", "GET"]
     State_Transitions: "pending → verifying → verified/rejected"
     
-    POST_Request:
-      Description: "Submit new license verification request"
-      Request_Body:
-        type: "tcm_practitioner | pharmacy"
-        license_number: "TCM-XXXXXX | PHARM-XXXXXX"
-        license_expiry: "ISO 8601 datetime (must be >30 days future)"
-        user_id?: "UUID (optional)"
-        additional_info?:
-          practitioner_name?: "string (TCM only)"
-          clinic_name?: "string (TCM only)"
-          pharmacy_name?: "string (Pharmacy only)"
-          business_registration?: "string (Pharmacy only)"
-      
-      Response_Success:
-        success: true
-        data:
-          verification_id: "ver_timestamp_random"
-          type: "tcm_practitioner | pharmacy"
-          license_number: "string"
-          status: "pending | verifying | verified | rejected"
-          submitted_at: "ISO 8601"
-          verified_at?: "ISO 8601"
-          rejection_reason?: "string"
-          verification_details:
-            expiry_date: "ISO 8601"
-            issuing_authority?: "string"
-            verification_method?: "string"
-        timestamp: "ISO 8601"
-      
-      Response_Error:
-        success: false
-        error:
-          code: "VALIDATION_ERROR | INTERNAL_ERROR | STATE_ERROR"
-          message: "string"
-          field?: "string"
-          details?: "object"
-        timestamp: "ISO 8601"
+    Request_Format:
+      type: "tcm_practitioner | pharmacy"
+      license_number: "TCM-XXXXXX | PHARM-XXXXXX"
+      license_expiry: "ISO 8601 datetime (>30 days future)"
     
-    GET_Request:
-      Description: "Check verification status"
-      Query_Parameters:
-        verification_id: "string (required)"
-      
-      Response_Success: "Same as POST Response_Success"
-      Response_Error:
-        404: "Verification not found"
-        400: "Invalid verification_id"
-        500: "Internal server error"
+    Response_Format:
+      success: boolean
+      data:
+        verification_id: string
+        status: "pending | verifying | verified | rejected"
+        timestamp: "ISO 8601"
     
     Mock_Verification_Rules:
       TCM_Approved: "License numbers starting with TCM-1"
-      TCM_Rejected: "License numbers starting with TCM-9"
-      Pharmacy_Approved: "License numbers starting with PHARM-2"  
-      Pharmacy_Rejected: "License numbers starting with PHARM-8"
-    
-    Performance_Target: "< 500ms P95 response time"
-    Security: "HIPAA compliant, no PII in logs"
-    Frontend_Integration: "EdgeFunctionAdapter compatible"
+      Pharmacy_Approved: "License numbers starting with PHARM-2"
 
 Authentication_Business_Logic:
   User_Registration_Validation:
     Function_Name: "validate-registration"
-    Purpose: "Complex role-based validation during user signup"
-    Validations:
-      TCM_Practitioner:
-        - License number format validation
-        - Professional certification requirements
-        - Business address verification
-      Pharmacy:
-        - Pharmacy license validation
-        - Operator certification requirements
-        - Business registration verification
-      Admin:
-        - Internal authorization required
-        - Multi-factor authentication setup mandatory
+    Purpose: "Role-based validation during user signup"
+    Validation_Types: ["TCM_Practitioner", "Pharmacy", "Admin"]
     Response_Format:
-      Success: { "valid": true, "metadata": {...} }
-      Error: { "valid": false, "errors": [...], "required_fields": [...] }
-      
-  Session_Security_Enhancement:
-    Function_Name: "enhance-session-security"
-    Purpose: "Additional security validation for sensitive operations"
-    Security_Checks:
-      - Device fingerprinting validation
-      - Geographic location verification
-      - Session activity anomaly detection
-      - MFA requirement enforcement for admin operations
-    Risk_Assessment:
-      Low: "Standard session validation"
-      Medium: "Additional verification prompt"
-      High: "Force re-authentication with MFA"
+      Success: {"valid": true, "metadata": {...}}
+      Error: {"valid": false, "errors": [...]}
 
 Registration_Validation_Service:
   Function_Name: "registration-validator"
@@ -840,140 +738,23 @@ Registration_Validation_Service:
   
   Request_Structure:
     Method: POST
-    Headers:
-      Authorization: "Bearer {anon_key}"
-      Content-Type: "application/json"
     Body:
-      role: enum ["tcm_practitioner", "pharmacy", "admin"] (required)
-      data: object (role-specific fields)
+      role: enum ["tcm_practitioner", "pharmacy", "admin"]
+      data: object (role-specific validation fields)
   
-  TCM_Practitioner_Validation:
-    Required_Fields:
-      email: "Valid email format"
-      password: "Min 12 chars with uppercase, lowercase, number, symbol"
-      full_name: "2-100 characters"
-      phone: "International format +[country][number]"
-      license_number: "Format: TCM-XXXXXX (6 digits)"
-      license_expiry: "ISO datetime, minimum 30 days future"
-      years_of_practice: "Number 0-70"
-    Optional_Fields:
-      clinic_name: "2-200 characters"
-      clinic_address: "10-500 characters"
-      specializations: "Array, max 10 items"
-    
-  Pharmacy_Validation:
-    Required_Fields:
-      email: "Valid email format"
-      password: "Min 12 chars with complexity requirements"
-      pharmacy_name: "2-200 characters"
-      business_registration: "5-50 characters"
-      pharmacy_license: "Format: PHARM-XXXXXX (6 digits)"
-      license_expiry: "ISO datetime, minimum 30 days future"
-      address: "10-500 characters"
-      contact_phone: "International format"
-      contact_person: "2-100 characters"
-    Optional_Fields:
-      operating_hours: "Valid JSON string"
-      delivery_available: "Boolean"
-  
-  Admin_Validation:
-    Required_Fields:
-      email: "Must be @platform.com domain"
-      password: "Min 16 chars with enhanced complexity"
-      full_name: "2-100 characters"
-      phone: "International format with country code"
-      department: enum ["operations", "finance", "support", "compliance"]
-      access_level: enum ["full", "limited", "readonly"]
-      mfa_required: "Must be true"
-    Conditional_Fields:
-      supervisor_email: "Required for limited/readonly access levels"
+  Validation_Rules:
+    TCM_Practitioner: "License format TCM-XXXXXX, minimum 30 days expiry"
+    Pharmacy: "License format PHARM-XXXXXX, business registration required"
+    Admin: "Platform domain email, enhanced password complexity"
   
   Response_Formats:
-    Success_Response:
-      status: 200
-      body:
-        success: true
-        data:
-          validated: true
-          role: string
-          message: "Registration data validated successfully"
-        timestamp: ISO8601
-    
-    Validation_Error:
-      status: 400
-      body:
-        success: false
-        error:
-          code: string
-          message: string
-          field: string (optional)
-          details:
-            requirement: string
-            received: string
-        timestamp: ISO8601
-    
-    Email_Conflict:
-      status: 409
-      body:
-        success: false
-        error:
-          code: "EMAIL_EXISTS"
-          message: "This email is already registered"
-          field: "email"
-        timestamp: ISO8601
-  
-  Error_Codes:
-    INVALID_EMAIL: "Email format invalid"
-    EMAIL_EXISTS: "Email already registered"
-    WEAK_PASSWORD: "Password doesn't meet requirements"
-    INVALID_LICENSE: "License format or expiry invalid"
-    EXPIRED_LICENSE: "License has expired and cannot be verified"
-    INVALID_LICENSE_FORMAT: "License number doesn't match required format (TCM-XXXXXX or PHARM-XXXXXX)"
-    INVALID_PHONE: "Phone number format invalid"
-    INVALID_DOMAIN: "Admin email domain not allowed"
-    MISSING_FIELD: "Required field missing"
-    INVALID_ROLE: "Role type not recognized"
-    VALIDATION_ERROR: "General validation failure"
-    STATE_ERROR: "Failed to transition verification state"
-    INTERNAL_ERROR: "Server error"
-    NOT_FOUND: "Resource not found or access denied"
-    UNAUTHORIZED: "Authentication required"
-    FORBIDDEN: "Insufficient permissions"
-    METHOD_NOT_ALLOWED: "HTTP method not allowed"
-  
-  Performance_Requirements:
-    Response_Time: "< 500ms P95"
-    Validation_Time: "< 100ms for schema validation"
-    Database_Lookup: "< 200ms for email existence check"
-    Total_Processing: "< 400ms including all validations"
-  
-  Security_Considerations:
-    Rate_Limiting: "10 requests per minute per IP"
-    Input_Sanitization: "All inputs sanitized before processing"
-    SQL_Injection_Prevention: "Parameterized queries only"
-    Service_Role_Key: "Never exposed in response or logs"
-    Audit_Logging: "All validation attempts logged (anonymized)"
-    CORS: "Restricted to allowed origins only"
+    Success: {"success": true, "validated": true}
+    Error: {"success": false, "error": {"code": string, "message": string}}
 
 Edge_Functions_Configuration:
-  Local_Development:
-    Command: "supabase functions serve"
-    URL_Pattern: "http://127.0.0.1:54321/functions/v1/{function-name}"
-    Environment_Variables:
-      - SUPABASE_URL
-      - SUPABASE_ANON_KEY
-      - SUPABASE_SERVICE_ROLE_KEY
-      
-  Production_Deployment:
-    Command: "supabase functions deploy {function-name}"
-    Environment_Management: "via Supabase Dashboard or CLI"
-    Monitoring: "Built-in Supabase Edge Functions analytics"
-    
-  Security_Configuration:
-    CORS_Headers: "Configured for frontend domain access"
-    Rate_Limiting: "Applied per Supabase project settings"
-    Error_Logging: "Integrated with Supabase logging system"
-    Secrets_Management: "Environment variables via Supabase Vault"
+  Local_Development: "supabase functions serve on http://127.0.0.1:54321/functions/v1/"
+  Production_Deployment: "supabase functions deploy with environment management"
+  Security_Configuration: "CORS, rate limiting, and secrets management via Supabase"
 
 Frontend_Integration_Patterns:
   Session_Management_with_SSR:
@@ -997,15 +778,8 @@ Frontend_Integration_Patterns:
 
 Error_Handling_Integration:
   Edge_Function_Failures:
-    Custom_Access_Token_Failure:
-      Fallback: "Default Supabase JWT claims used"
-      Client_Handling: "Check for missing custom claims and request user profile API"
-      Monitoring: "Log custom claim failures for investigation"
-      
-  Template_Selection_Failures:
-    Fallback: "Default email template used"
-    User_Impact: "Generic email sent instead of role-specific"
-    Recovery: "Manual template assignment via admin interface"
+    Custom_Access_Token_Failure: "Fallback to default Supabase JWT claims"
+    Template_Selection_Failures: "Fallback to default email template"
 ```
 
 ## **🔧 Administrative User Management API (M1 Scope Only)**
@@ -1338,7 +1112,6 @@ Development_Environment_Setup:
   Environment_Variables: |
     NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
     
   Local_Development_Commands:
     Backend_Start: "supabase start"
@@ -1363,52 +1136,303 @@ Development_Environment_Setup:
       }
 ```
 
-## **🔗 Future Milestone Planning References**
+## **🗄️ Controlled Views API (M1.3B)**
+
+### **Role-Based Profile Views with Business Relationship Filtering**
+
+**M1.3B Implementation**: Controlled views provide secure, role-based access to user profile data with built-in business relationship validation and Zero-PII compliance.
 
 ```yaml
-M2_M7_API_Expansion:
-  Status: "Planning phase - contracts will be added when milestone development begins"
-  
-  M2_Prescription_QR_System:
-    Planned_Endpoints:
-      - "POST /rest/v1/prescriptions (full CRUD operations)"
-      - "POST /functions/v1/generate-qr (secure QR generation)"
-      - "POST /functions/v1/verify-qr (QR validation)"
-      - "GET /rest/v1/prescriptions/by-token/{token} (patient access)"
-    Reference: "API_Analysis_Report.md lines 580-596"
+Controlled_Views_Architecture:
+  Base_Infrastructure:
+    - Row Level Security (RLS) policies on base tables
+    - Security barrier enabled views (security_barrier=true)
+    - Business relationship validation via helper functions
+    - Zero-PII compliance with field whitelisting
     
-  M3_Payment_Processing:
-    Planned_Endpoints:
-      - "POST /functions/v1/create-payment-intent (Stripe integration)"
-      - "POST /functions/v1/webhook/stripe (payment events)"
-      - "POST /rest/v1/escrow/* (escrow management)"
-    Reference: "API_Analysis_Report.md lines 598-610"
-    
-  M4_Pharmacy_Fulfillment:
-    Planned_Endpoints:
-      - "GET /rest/v1/pharmacy/orders (order management)"
-      - "POST /rest/v1/pharmacy/orders/{id}/accept (order acceptance)"
-      - "PUT /rest/v1/pharmacy/orders/{id}/status (fulfillment tracking)"
-    Reference: "API_Analysis_Report.md lines 612-624"
-    
-  M5_Financial_Settlement:
-    Planned_Endpoints:
-      - "POST /functions/v1/calculate-settlement (automated settlement)"
-      - "GET /rest/v1/pricing/differential-model (pricing management)"
-      - "GET /rest/v1/revenue/analytics (revenue tracking)"
-    Reference: "API_Analysis_Report.md lines 626-638"
-    
-  M6_M7_Advanced_Analytics:
-    Planned_Endpoints:
-      - "GET /rest/v1/analytics/business-intelligence"
-      - "POST /rest/v1/integrations/third-party"
-      - "GET /rest/v1/marketplace/api-catalog"
-    Reference: "API_Analysis_Report.md lines 640-652"
+  Helper_Functions_Security:
+    - SECURITY DEFINER: All functions run with elevated privileges
+    - STABLE volatility: Consistent results for same inputs
+    - Fixed search_path: Prevents search_path injection attacks
+    - Authentication: Functions use auth.uid() for current user context
+```
 
-Rolling_Wave_Compliance:
-  Current_Focus: "M1 Core Authentication & User Management only"
-  Next_Activation: "M2 contracts added when backend development begins"
-  Planning_Authority: "Complete expansion strategy in API_Analysis_Report.md#分阶段API文档策略"
+### **TCM Practitioner Context View**
+
+```yaml
+GET /rest/v1/v_profiles_tcm_context:
+  Description: Access TCM practitioner profiles with prescription business relationship filtering
+  Authentication: Bearer token (authenticated role required)
+  Business_Logic: "Returns TCM practitioners that current user has prescription business relationships with"
+  Request_Headers:
+    Authorization: "Bearer {access_token}"
+  Response_Success:
+    status: 200
+    data: array
+      - id: uuid                           # User profile ID
+        role: "tcm_practitioner"
+        business_name: string               # Derived from business_info or fallback
+        tcm_specialty: enum                 # Practitioner specialization
+        verification_status: enum           # "active", "pending", "suspended"
+        created_at: timestamp               # Profile creation date
+  Response_Empty:
+    status: 200
+    data: []                             # No relationships found
+  Zero_PII_Compliance:
+    Included_Fields: ["id", "role", "business_name", "tcm_specialty", "verification_status", "created_at"]
+    Excluded_PII: "All personal identifiers, contact info, and sensitive data excluded"
+  Business_Relationship_Logic:
+    Function: "private.has_prescription_business_relationship(auth.uid(), profile.id)"
+    Behavior: "Returns profiles only when authenticated user has prescription business relationship"
+    Positive_Case: "COUNT > 0 when valid business relationship exists"
+    Negative_Case: "COUNT = 0 when no business relationship or unauthorized access"
+  RLS_Enforcement: "Base table policies + view-level business relationship filtering"
+  Security_Barrier: "true - prevents information leakage through query plan inspection"
+```
+
+### **Pharmacy Context View**
+
+```yaml
+GET /rest/v1/v_profiles_pharmacy_context:
+  Description: Access pharmacy profiles with referral business relationship filtering
+  Authentication: Bearer token (authenticated role required)
+  Business_Logic: "Returns pharmacies that current user has referral business relationships with"
+  Request_Headers:
+    Authorization: "Bearer {access_token}"
+  Response_Success:
+    status: 200
+    data: array
+      - id: uuid                           # User profile ID
+        role: "pharmacy"
+        business_name: string               # Derived from business_info or fallback
+        pharmacy_type: enum                 # "retail_pharmacy", "hospital_pharmacy"
+        verification_status: enum           # "active", "pending", "suspended"
+        created_at: timestamp               # Profile creation date
+  Response_Empty:
+    status: 200
+    data: []                             # No relationships found
+  Zero_PII_Compliance:
+    Included_Fields: ["id", "role", "business_name", "pharmacy_type", "verification_status", "created_at"]
+    Excluded_PII: "All personal identifiers, contact info, and sensitive data excluded"
+  Business_Relationship_Logic:
+    Function: "private.has_referral_business_relationship(auth.uid(), profile.id)"
+    Behavior: "Returns profiles only when authenticated user has referral business relationship"
+    Positive_Case: "COUNT > 0 when valid business relationship exists"
+    Negative_Case: "COUNT = 0 when no business relationship or unauthorized access"
+  RLS_Enforcement: "Base table policies + view-level business relationship filtering"
+  Security_Barrier: "true - prevents information leakage through query plan inspection"
+```
+
+### **Public Directory View**
+
+```yaml
+GET /rest/v1/v_profiles_public:
+  Description: Access public business directory (authenticated access to public profiles)
+  Authentication: Bearer token (authenticated role required)
+  Business_Logic: "Returns only profiles marked as public (is_public_profile=true)"
+  Request_Headers:
+    Authorization: "Bearer {access_token}"
+  Response_Success:
+    status: 200
+    data: array
+      - id: uuid                           # User profile ID
+        role: enum                          # "tcm_practitioner" or "pharmacy"
+        business_name: string               # Public business name
+        verification_status: enum           # "active", "pending", "suspended"
+        created_at: timestamp               # Profile creation date
+  Zero_PII_Compliance:
+    Included_Fields: ["id", "role", "business_name", "verification_status", "created_at"]
+    Excluded_PII: "All personal identifiers and private business data excluded"
+  Public_Directory_Logic:
+    Filter: "is_public_profile = true AND status = 'active'"
+    Scope: "Both TCM practitioners and pharmacies eligible for public listing"
+    Business_Purpose: "Public business directory for discovery and networking"
+  RLS_Enforcement: "Base table policies + public profile filtering"
+  Security_Barrier: "true - maintains consistent security architecture"
+```
+
+### **Environment Configuration for Frontend Integration**
+
+```yaml
+Frontend_Environment_Setup:
+  Required_Environment_Variables:
+    NEXT_PUBLIC_SUPABASE_URL: "${NEXT_PUBLIC_SUPABASE_URL}"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+    # Note: Service role key should never be exposed to frontend
+    
+  Local_Development_Override:
+    NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "${LOCAL_ANON_KEY}"
+    
+  JWT_Context_Requirements:
+    Authentication: "User must be authenticated with valid JWT token"
+    Claims_Structure:
+      sub: "User UUID (used by auth.uid())"
+      role: "authenticated" 
+      aud: "authenticated"
+      exp: "Token expiration timestamp"
+    Custom_Claims: "Enhanced via custom-access-token Edge Function"
+      user_role: "tcm_practitioner | pharmacy | admin"
+      profile_status: "active | pending | suspended"
+```
+
+### **Frontend Integration Examples**
+
+```yaml
+React_Integration_Patterns:
+  Controlled_View_Access: |
+    const TCMContextProvider = () => {
+      const [tcmProfiles, setTcmProfiles] = useState([])
+      const [loading, setLoading] = useState(true)
+      
+      useEffect(() => {
+        const fetchTCMProfiles = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('v_profiles_tcm_context')
+              .select('*')
+              
+            if (error) throw error
+            setTcmProfiles(data || [])
+          } catch (error) {
+            console.error('Failed to fetch TCM profiles:', error)
+            setTcmProfiles([])
+          } finally {
+            setLoading(false)
+          }
+        }
+        
+        fetchTCMProfiles()
+      }, [])
+      
+      return { tcmProfiles, loading }
+    }
+    
+  Pharmacy_Context_Access: |
+    const PharmacyContextProvider = () => {
+      const [pharmacyProfiles, setPharmacyProfiles] = useState([])
+      
+      const fetchPharmacyProfiles = async () => {
+        const { data, error } = await supabase
+          .from('v_profiles_pharmacy_context')
+          .select('*')
+          
+        if (error) {
+          console.error('Failed to fetch pharmacy profiles:', error)
+          return []
+        }
+        
+        return data || []
+      }
+      
+      return { fetchPharmacyProfiles }
+    }
+    
+  Public_Directory_Access: |
+    const PublicDirectoryComponent = () => {
+      const [publicProfiles, setPublicProfiles] = useState([])
+      
+      useEffect(() => {
+        const loadPublicDirectory = async () => {
+          const { data, error } = await supabase
+            .from('v_profiles_public')
+            .select('*')
+            .order('business_name', { ascending: true })
+            
+          if (!error && data) {
+            setPublicProfiles(data)
+          }
+        }
+        
+        loadPublicDirectory()
+      }, [])
+      
+      return (
+        <div className="public-directory">
+          {publicProfiles.map(profile => (
+            <div key={profile.id} className="business-card">
+              <h3>{profile.business_name}</h3>
+              <p>Type: {profile.role}</p>
+              <p>Status: {profile.verification_status}</p>
+            </div>
+          ))}
+        </div>
+      )
+    }
+```
+
+### **IRG Integration Test Baseline**
+
+```yaml
+Behavioral_Test_Cases:
+  Test_Case_1_Pharmacy_to_TCM_Positive:
+    Description: "Pharmacy user accessing TCM profiles with valid business relationship"
+    JWT_Context: '{"sub": "33333333-3333-3333-3333-333333333333", "role": "authenticated"}'
+    Expected_Result: "COUNT > 0 (should return 2 TCM practitioner profiles)"
+    Business_Logic: "Pharmacy has prescription business relationships with TCM practitioners"
+    
+  Test_Case_2_Nonexistent_User_to_TCM_Negative:
+    Description: "Non-existent user attempting to access TCM profiles"
+    JWT_Context: '{"sub": "88888888-8888-8888-8888-888888888888", "role": "authenticated"}'
+    Expected_Result: "COUNT = 0 (empty result set)"
+    Security_Validation: "No unauthorized access to profiles"
+    
+  Test_Case_3_TCM_to_Pharmacy_Positive:
+    Description: "TCM practitioner accessing pharmacy profiles with valid business relationship"
+    JWT_Context: '{"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}'
+    Expected_Result: "COUNT > 0 (should return 2 pharmacy profiles)"
+    Business_Logic: "TCM practitioner has referral business relationships with pharmacies"
+    
+  Test_Case_4_Nonexistent_User_to_Pharmacy_Negative:
+    Description: "Non-existent user attempting to access pharmacy profiles"
+    JWT_Context: '{"sub": "77777777-7777-7777-7777-777777777777", "role": "authenticated"}'
+    Expected_Result: "COUNT = 0 (empty result set)"
+    Security_Validation: "No unauthorized access to profiles"
+    
+  Public_Directory_Test:
+    Description: "Any authenticated user accessing public business directory"
+    JWT_Context: "Any valid authenticated user token"
+    Expected_Result: "COUNT = 2 (profiles with is_public_profile=true)"
+    Public_Access: "Shows only public business listings"
+
+Test_Data_Requirements:
+  Seed_Data_Profiles:
+    - TCM_Practitioner_1: "ID: 11111111-1111-1111-1111-111111111111, Public: false"
+    - TCM_Practitioner_2: "ID: 22222222-2222-2222-2222-222222222222, Public: true"
+    - Pharmacy_1: "ID: 33333333-3333-3333-3333-333333333333, Public: true"
+    - Pharmacy_2: "ID: 44444444-4444-4444-4444-444444444444, Public: false"
+    
+  Business_Relationships:
+    - Pharmacy_1_to_TCM_1: "Prescription business relationship (valid)"
+    - TCM_1_to_Pharmacy_1: "Referral business relationship (valid)"
+    - Cross_Role_Validation: "Complementary business relationships established"
+
+IRG_Validation_Criteria:
+  Security_Requirements:
+    - "Positive cases must return COUNT > 0"
+    - "Negative cases must return COUNT = 0"
+    - "No information leakage for unauthorized access"
+    - "All views maintain security_barrier=true"
+    
+  Performance_Requirements:
+    - "Query response time < 200ms P95"
+    - "Helper function execution < 50ms"
+    - "View materialization < 150ms"
+    
+  Compliance_Requirements:
+    - "Zero-PII: No personal identifiers in response"
+    - "Business-only: Only business relationship data exposed"
+    - "Audit-ready: All access attempts logged"
+```
+
+## **🔗 Future Development Planning**
+
+```yaml
+Future_API_Expansion:
+  Status: "Rolling Wave Planning - Future contracts added incrementally"
+  Current_Focus: "M1 Core Authentication & User Management"
+  Next_Phase: "Contracts added when development commences"
+  Planning_Reference: "See planning documentation for detailed expansion strategy"
 ```
 
 ## **🔒 Error Handling & Security**

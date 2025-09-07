@@ -1,0 +1,20 @@
+ category | table_schema | table_name 
+----------+--------------+------------
+(0 rows)
+
+ category | relname | reloptions 
+----------+---------+------------
+(0 rows)
+
+ category | table_name | column_name 
+----------+------------+-------------
+(0 rows)
+
+ category | table_name | column_count 
+----------+------------+--------------
+(0 rows)
+
+ category | table_schema | table_name | privilege_type | grantee 
+----------+--------------+------------+----------------+---------
+(0 rows)
+

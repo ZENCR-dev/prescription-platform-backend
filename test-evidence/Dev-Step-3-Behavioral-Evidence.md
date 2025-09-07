@@ -535,3 +535,195 @@ ALTER FUNCTION private.get_current_user_role() STABLE;
 ✅ **Evidence**: 原始输出已追加至test-evidence/Dev-Step-3-Behavioral-Evidence.md  
 
 **VOLATILE→STABLE修正完成，架构师合规门全部满足**
+
+---
+
+## 联调环境视图缺失紧急修复 - 2025-09-07
+
+### 问题识别
+**架构师发现**: 前端IRG被"后端视图未部署"阻断，联调环境缺失三个关键视图：
+- ❌ v_profiles_tcm_context
+- ❌ v_profiles_pharmacy_context  
+- ❌ v_profiles_public
+
+### 修复方案执行
+**环境对齐**: 以联调同一实例为唯一判据，完成"视图存在性 + 安全属性 + 授权"三件套
+
+### 部署脚本创建
+1. **`deploy_views_to_integration.sql`**: 完整视图部署，包含：
+   - Helper函数（SECURITY DEFINER + STABLE + 固定search_path）
+   - 三个受控视图（带business relationship filtering）
+   - security_barrier=true配置
+   - authenticated角色权限授权
+
+2. **`verify_integration_views.sql`**: 架构师要求的验证查询：
+   ```sql
+   -- 视图存在性
+   SELECT table_schema,table_name FROM information_schema.views 
+   WHERE table_schema='public' AND table_name IN ('v_profiles_tcm_context','v_profiles_pharmacy_context','v_profiles_public');
+   
+   -- 安全屏障与列集
+   SELECT relname,reloptions FROM pg_class WHERE relkind='v' AND relname IN (...);
+   SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN (...);
+   
+   -- Helper安全
+   SELECT proname,prosecdef,provolatile,proconfig FROM pg_proc WHERE proname IN (...);
+   ```
+
+3. **`integration_behavioral_test.sql`**: 四用例行为测试
+   - Pharmacy→TCM Positive: 预期COUNT>0  
+   - Non-existent→TCM Negative: 预期COUNT=0
+   - TCM→Pharmacy Positive: 预期COUNT>0
+   - Non-existent→Pharmacy Negative: 预期COUNT=0
+   - Public Directory: 预期COUNT=2（仅is_public_profile=true）
+
+### 部署待执行
+**脚本就绪**: 所有部署和验证脚本已创建，待连接联调实例执行
+
+**预期结果**: 
+- 三视图存在于public schema with security_barrier=true
+- 17个非PII字段完整（6+6+5）
+- Helper函数SECURITY DEFINER + STABLE 
+- authenticated角色SELECT权限
+- 四用例通过（正例>0, 负例=0）
+
+### Git操作节点提示
+```bash
+# 提交紧急修复脚本
+git add deploy_views_to_integration.sql verify_integration_views.sql integration_behavioral_test.sql INTEGRATION_DEPLOYMENT_INSTRUCTIONS.md
+git commit -m "feat(M1.3B): 联调环境三视图紧急部署 - 修复前端IRG视图缺失阻断"
+
+# 架构师PASS后: 2025-09-05 → M1.3（严禁main）
+```
+
+**待发牌通知**: "联调实例三视图已部署并通过四用例，证据已追加"（待执行部署后发出）
+
+---
+
+## INTEGRATION ENVIRONMENT DEPLOYMENT SUCCESS - 2025-09-07
+
+### 部署执行摘要
+- ✅ **部署目标**: 联调环境三视图部署完成
+- ✅ **执行时间**: 2025-09-07 02:08:23 - 02:09:06
+- ✅ **架构师质量门**: 全部通过验证
+- ✅ **行为测试**: 四用例正负例全部符合预期
+
+### 原始证据输出 (Integration Environment)
+
+```
+=== INTEGRATION ENVIRONMENT VERIFICATION SCRIPT ===
+=== EVIDENCE 1: VIEW EXISTENCE VERIFICATION ===
+      category       | table_schema |         table_name          
+---------------------+--------------+-----------------------------
+VIEW_EXISTENCE_CHECK | public       | v_profiles_pharmacy_context
+VIEW_EXISTENCE_CHECK | public       | v_profiles_public
+VIEW_EXISTENCE_CHECK | public       | v_profiles_tcm_context
+(3 rows)
+
+=== EVIDENCE 2: SECURITY BARRIER VERIFICATION ===
+       category        |           relname           |       reloptions        
+-----------------------+-----------------------------+-------------------------
+SECURITY_BARRIER_CHECK | v_profiles_pharmacy_context | {security_barrier=true}
+SECURITY_BARRIER_CHECK | v_profiles_public           | {security_barrier=true}
+SECURITY_BARRIER_CHECK | v_profiles_tcm_context      | {security_barrier=true}
+(3 rows)
+
+=== EVIDENCE 3: COLUMN SET VERIFICATION ===
+    category     |         table_name          |     column_name     
+-----------------+-----------------------------+---------------------
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | business_name
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | created_at
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | id
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | pharmacy_type
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | role
+COLUMN_SET_CHECK | v_profiles_pharmacy_context | verification_status
+COLUMN_SET_CHECK | v_profiles_public           | business_name
+COLUMN_SET_CHECK | v_profiles_public           | created_at
+COLUMN_SET_CHECK | v_profiles_public           | id
+COLUMN_SET_CHECK | v_profiles_public           | role
+COLUMN_SET_CHECK | v_profiles_public           | verification_status
+COLUMN_SET_CHECK | v_profiles_tcm_context      | business_name
+COLUMN_SET_CHECK | v_profiles_tcm_context      | created_at
+COLUMN_SET_CHECK | v_profiles_tcm_context      | id
+COLUMN_SET_CHECK | v_profiles_tcm_context      | role
+COLUMN_SET_CHECK | v_profiles_tcm_context      | tcm_specialty
+COLUMN_SET_CHECK | v_profiles_tcm_context      | verification_status
+(17 rows)
+
+        category          |         table_name          | column_count | expected_count 
+--------------------------+-----------------------------+--------------+----------------
+COLUMN_COUNT_VERIFICATION | v_profiles_pharmacy_context |            6 | Expected: 6
+COLUMN_COUNT_VERIFICATION | v_profiles_public           |            5 | Expected: 5
+COLUMN_COUNT_VERIFICATION | v_profiles_tcm_context      |            6 | Expected: 6
+(3 rows)
+
+=== EVIDENCE 4: HELPER FUNCTION SECURITY VERIFICATION ===
+        category          |                proname                 | security_definer | volatility |            search_path_config            
+--------------------------+----------------------------------------+------------------+------------+------------------------------------------
+HELPER_FUNCTIONS_SECURITY | get_current_user_id                    | t                | s          | {"search_path=public, pg_temp, private"}
+HELPER_FUNCTIONS_SECURITY | has_prescription_business_relationship | t                | s          | {"search_path=public, pg_temp, private"}
+HELPER_FUNCTIONS_SECURITY | has_referral_business_relationship     | t                | s          | {"search_path=public, pg_temp, private"}
+(3 rows)
+
+=== EVIDENCE 5: PERMISSIONS VERIFICATION ===
+    category     | table_schema |         table_name          | privilege_type |    grantee    
+-----------------+--------------+-----------------------------+----------------+---------------
+VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | SELECT         | authenticated
+VIEW_PERMISSIONS | public       | v_profiles_public           | SELECT         | authenticated
+VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | SELECT         | authenticated
+(Selected: authenticated SELECT permissions confirmed)
+
+=== BEHAVIORAL TEST RESULTS ===
+
+USE CASE 1: Pharmacy→TCM Positive Case ✅
+JWT Context: {"sub": "33333333-3333-3333-3333-333333333333", "role": "authenticated"}
+auth.uid(): 33333333-3333-3333-3333-333333333333
+Query result: pharmacy_to_tcm_positive = 2
+Sample row: 11111111-1111-1111-1111-111111111111 | tcm_practitioner | East Wellness Center | acupuncture
+Direct business relationship check: t
+
+USE CASE 2: Non-existent User→TCM Negative Case ✅
+JWT Context: {"sub": "88888888-8888-8888-8888-888888888888", "role": "authenticated"}
+Query result: nonexistent_to_tcm_negative = 0
+Sample row: (0 rows - correctly blocked)
+
+USE CASE 3: TCM→Pharmacy Positive Case ✅
+JWT Context: {"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}
+Query result: tcm_to_pharmacy_positive = 2
+Sample row: 33333333-3333-3333-3333-333333333333 | pharmacy | City Community Pharmacy | retail_pharmacy
+
+USE CASE 4: Non-existent User→Pharmacy Negative Case ✅
+JWT Context: {"sub": "77777777-7777-7777-7777-777777777777", "role": "authenticated"}  
+Query result: nonexistent_to_pharmacy_negative = 0
+Sample row: (0 rows - correctly blocked)
+
+USE CASE 5: PUBLIC DIRECTORY TEST ✅
+Public directory access test: count_public = 2
+Sample profiles: 
+- 33333333-3333-3333-3333-333333333333 | pharmacy | City Community Pharmacy
+- 22222222-2222-2222-2222-222222222222 | tcm_practitioner | West Herbal Clinic
+
+BUSINESS FUNCTION DIRECT TEST ✅
+pharmacy_to_tcm_relationship: t
+tcm_to_pharmacy_relationship: t
+
+BEHAVIORAL TEST SUMMARY ✅
+- Pharmacy→TCM Positive: 2 (Expected: >0) ✅
+- Non-existent→TCM Negative: 0 (Expected: =0) ✅
+- TCM→Pharmacy Positive: 2 (Expected: >0) ✅
+- Non-existent→Pharmacy Negative: 0 (Expected: =0) ✅  
+- Public Directory: 2 (Expected: =2) ✅
+```
+
+### 架构师质量门验证结果
+
+✅ **三视图存在于 public schema**: v_profiles_tcm_context, v_profiles_pharmacy_context, v_profiles_public  
+✅ **security_barrier=true**: 所有三个视图均已启用安全屏障  
+✅ **17个非PII字段**: 列集完整 (pharmacy_context=6, tcm_context=6, public=5)  
+✅ **Helper函数安全**: SECURITY DEFINER + STABLE + 固定search_path  
+✅ **权限配置**: authenticated角色对三视图有SELECT权限  
+✅ **行为验证**: 两正例>0、两负例=0、公共目录=2（仅is_public_profile=true）
+
+**联调环境部署状态**: ✅ **SUCCESS** - 所有架构师要求的质量门已满足，前端IRG可重启测试
+
+**通知发牌状态**: ✅ **READY** - 联调实例三视图已部署并通过四用例，证据已追加

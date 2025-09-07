@@ -1,0 +1,302 @@
+=== INTEGRATION ENVIRONMENT VERIFICATION SCRIPT ===
+=== EVIDENCE 1: VIEW EXISTENCE VERIFICATION ===
+       category       | table_schema |         table_name          
+----------------------+--------------+-----------------------------
+ VIEW_EXISTENCE_CHECK | public       | v_profiles_pharmacy_context
+ VIEW_EXISTENCE_CHECK | public       | v_profiles_public
+ VIEW_EXISTENCE_CHECK | public       | v_profiles_tcm_context
+(3 rows)
+
+=== EVIDENCE 2: SECURITY BARRIER VERIFICATION ===
+        category        |           relname           |       reloptions        
+------------------------+-----------------------------+-------------------------
+ SECURITY_BARRIER_CHECK | v_profiles_pharmacy_context | {security_barrier=true}
+ SECURITY_BARRIER_CHECK | v_profiles_public           | {security_barrier=true}
+ SECURITY_BARRIER_CHECK | v_profiles_tcm_context      | {security_barrier=true}
+(3 rows)
+
+=== EVIDENCE 3: COLUMN SET VERIFICATION ===
+     category     |         table_name          |     column_name     
+------------------+-----------------------------+---------------------
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | business_name
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | created_at
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | id
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | pharmacy_type
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | role
+ COLUMN_SET_CHECK | v_profiles_pharmacy_context | verification_status
+ COLUMN_SET_CHECK | v_profiles_public           | business_name
+ COLUMN_SET_CHECK | v_profiles_public           | created_at
+ COLUMN_SET_CHECK | v_profiles_public           | id
+ COLUMN_SET_CHECK | v_profiles_public           | role
+ COLUMN_SET_CHECK | v_profiles_public           | verification_status
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | business_name
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | created_at
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | id
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | role
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | tcm_specialty
+ COLUMN_SET_CHECK | v_profiles_tcm_context      | verification_status
+(17 rows)
+
+         category          |         table_name          | column_count | expected_count 
+---------------------------+-----------------------------+--------------+----------------
+ COLUMN_COUNT_VERIFICATION | v_profiles_pharmacy_context |            6 | Expected: 6
+ COLUMN_COUNT_VERIFICATION | v_profiles_public           |            5 | Expected: 5
+ COLUMN_COUNT_VERIFICATION | v_profiles_tcm_context      |            6 | Expected: 6
+(3 rows)
+
+=== EVIDENCE 4: HELPER FUNCTION SECURITY VERIFICATION ===
+         category          |                proname                 | security_definer | volatility |            search_path_config            
+---------------------------+----------------------------------------+------------------+------------+------------------------------------------
+ HELPER_FUNCTIONS_SECURITY | get_current_user_id                    | t                | s          | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_SECURITY | has_prescription_business_relationship | t                | s          | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_SECURITY | has_referral_business_relationship     | t                | s          | {"search_path=public, pg_temp, private"}
+(3 rows)
+
+         category          |                proname                 | security_setting | volatility_setting |            search_path_config            
+---------------------------+----------------------------------------+------------------+--------------------+------------------------------------------
+ HELPER_FUNCTIONS_EXTENDED | get_current_user_id                    | SECURITY DEFINER | STABLE             | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_EXTENDED | get_current_user_role                  | SECURITY DEFINER | STABLE             | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_EXTENDED | has_prescription_business_relationship | SECURITY DEFINER | STABLE             | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_EXTENDED | has_referral_business_relationship     | SECURITY DEFINER | STABLE             | {"search_path=public, pg_temp, private"}
+ HELPER_FUNCTIONS_EXTENDED | is_current_user_admin                  | SECURITY DEFINER | STABLE             | {"search_path=public, pg_temp, private"}
+(5 rows)
+
+=== EVIDENCE 5: VIEW DEFINITION VERIFICATION ===
+     category     | schemaname |          viewname           |                                                                                  definition_preview                                                                                   
+------------------+------------+-----------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ VIEW_DEFINITIONS | public     | v_profiles_pharmacy_context |  SELECT id,                                                                                                                                                                          +
+                  |            |                             |     role,                                                                                                                                                                            +
+                  |            |                             |     COALESCE((business_info ->> 'business_name'::text), (business_info ->> 'organization_name'::text), (business_name)::text, 'Business Name Not Available'::text) AS business_nam...
+ VIEW_DEFINITIONS | public     | v_profiles_public           |  SELECT id,                                                                                                                                                                          +
+                  |            |                             |     role,                                                                                                                                                                            +
+                  |            |                             |     status AS verification_status,                                                                                                                                                   +
+                  |            |                             |     COALESCE((business_info ->> 'business_name'::text), (business_info ->> 'organization_name'::text), (business_name)::text, 'Business Name No...
+ VIEW_DEFINITIONS | public     | v_profiles_tcm_context      |  SELECT id,                                                                                                                                                                          +
+                  |            |                             |     role,                                                                                                                                                                            +
+                  |            |                             |     COALESCE((business_info ->> 'business_name'::text), (business_info ->> 'organization_name'::text), (business_name)::text, 'Business Name Not Available'::text) AS business_nam...
+(3 rows)
+
+        category         |          viewname           |        business_filtering_check         
+-------------------------+-----------------------------+-----------------------------------------
+ BUSINESS_FUNCTION_CHECK | v_profiles_pharmacy_context | Contains referral business function
+ BUSINESS_FUNCTION_CHECK | v_profiles_public           | Contains public profile filtering
+ BUSINESS_FUNCTION_CHECK | v_profiles_tcm_context      | Contains prescription business function
+(3 rows)
+
+=== EVIDENCE 6: PERMISSIONS VERIFICATION ===
+     category     | table_schema |         table_name          | privilege_type |    grantee    
+------------------+--------------+-----------------------------+----------------+---------------
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | DELETE         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | INSERT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | REFERENCES     | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | SELECT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | TRIGGER        | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | TRUNCATE       | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_pharmacy_context | UPDATE         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | DELETE         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | INSERT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | REFERENCES     | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | SELECT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | TRIGGER        | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | TRUNCATE       | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_public           | UPDATE         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | DELETE         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | INSERT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | REFERENCES     | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | SELECT         | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | TRIGGER        | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | TRUNCATE       | authenticated
+ VIEW_PERMISSIONS | public       | v_profiles_tcm_context      | UPDATE         | authenticated
+(21 rows)
+
+       category       | routine_schema |              routine_name              | privilege_type |    grantee    
+----------------------+----------------+----------------------------------------+----------------+---------------
+ FUNCTION_PERMISSIONS | private        | get_current_user_id                    | EXECUTE        | authenticated
+ FUNCTION_PERMISSIONS | private        | get_current_user_role                  | EXECUTE        | authenticated
+ FUNCTION_PERMISSIONS | private        | has_prescription_business_relationship | EXECUTE        | authenticated
+ FUNCTION_PERMISSIONS | private        | has_referral_business_relationship     | EXECUTE        | authenticated
+ FUNCTION_PERMISSIONS | private        | is_current_user_admin                  | EXECUTE        | authenticated
+(5 rows)
+
+=== EVIDENCE 7: ENVIRONMENT VERIFICATION ===
+     category     | database_name | connection_user | server_address |                                 postgresql_version                                 
+------------------+---------------+-----------------+----------------+------------------------------------------------------------------------------------
+ ENVIRONMENT_INFO | postgres      | postgres        | 172.18.0.2     | PostgreSQL 17.4 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit
+(1 row)
+
+        category        |       verification_time       |            verification_target             
+------------------------+-------------------------------+--------------------------------------------
+ VERIFICATION_TIMESTAMP | 2025-09-07 02:09:00.628153+00 | Integration Environment Views Verification
+(1 row)
+
+      category       | total_tables | view_count 
+---------------------+--------------+------------
+ SYSTEM_VERIFICATION |           12 |          3
+(1 row)
+
+=== INTEGRATION ENVIRONMENT VERIFICATION COMPLETE ===;
+NOTE: Save this output to integration_evidence.txt for architect review;
+FORMAT: All original SQL outputs ready for appending to evidence documents;
+=== INTEGRATION ENVIRONMENT BEHAVIORAL TEST SCRIPT ===
+=== SEED DATA SETUP ===
+    category     | total_profiles | tcm_count | pharmacy_count | public_profiles 
+-----------------+----------------+-----------+----------------+-----------------
+ SEED_DATA_CHECK |              4 |         2 |              2 |               2
+(1 row)
+
+NOTE: If no test data found above, run complete_seed_solution.sql first;
+=== BUSINESS FUNCTION DIRECT TEST ===
+   test_type   | pharmacy_to_tcm_relationship | tcm_to_pharmacy_relationship 
+---------------+------------------------------+------------------------------
+ FUNCTION_TEST | t                            | t
+(1 row)
+
+=== USE CASE 1: Pharmacy→TCM Positive Case ===
+SET
+Current JWT context:
+                           current_jwt_context                            
+--------------------------------------------------------------------------
+ {"sub": "33333333-3333-3333-3333-333333333333", "role": "authenticated"}
+(1 row)
+
+auth.uid() result:
+           auth_uid_result            
+--------------------------------------
+ 33333333-3333-3333-3333-333333333333
+(1 row)
+
+Query result:
+ pharmacy_to_tcm_positive 
+--------------------------
+                        2
+(1 row)
+
+Sample row (limit 1):
+                  id                  |       role       |    business_name     | tcm_specialty 
+--------------------------------------+------------------+----------------------+---------------
+ 11111111-1111-1111-1111-111111111111 | tcm_practitioner | East Wellness Center | acupuncture
+(1 row)
+
+Direct business relationship check:
+  check_type  |             current_user             |              target_tcm              | has_relationship 
+--------------+--------------------------------------+--------------------------------------+------------------
+ DIRECT_CHECK | 33333333-3333-3333-3333-333333333333 | 11111111-1111-1111-1111-111111111111 | t
+(1 row)
+
+=== USE CASE 2: Non-existent User→TCM Negative Case ===
+SET
+Current JWT context:
+                           current_jwt_context                            
+--------------------------------------------------------------------------
+ {"sub": "88888888-8888-8888-8888-888888888888", "role": "authenticated"}
+(1 row)
+
+Query result:
+ nonexistent_to_tcm_negative 
+-----------------------------
+                           0
+(1 row)
+
+Sample row (should be empty):
+ id | role | business_name | tcm_specialty 
+----+------+---------------+---------------
+(0 rows)
+
+=== USE CASE 3: TCM→Pharmacy Positive Case ===
+SET
+Current JWT context:
+                           current_jwt_context                            
+--------------------------------------------------------------------------
+ {"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}
+(1 row)
+
+Query result:
+ tcm_to_pharmacy_positive 
+--------------------------
+                        2
+(1 row)
+
+Sample row (limit 1):
+                  id                  |   role   |      business_name      |  pharmacy_type  
+--------------------------------------+----------+-------------------------+-----------------
+ 33333333-3333-3333-3333-333333333333 | pharmacy | City Community Pharmacy | retail_pharmacy
+(1 row)
+
+=== USE CASE 4: Non-existent User→Pharmacy Negative Case ===
+SET
+Current JWT context:
+                           current_jwt_context                            
+--------------------------------------------------------------------------
+ {"sub": "77777777-7777-7777-7777-777777777777", "role": "authenticated"}
+(1 row)
+
+Query result:
+ nonexistent_to_pharmacy_negative 
+----------------------------------
+                                0
+(1 row)
+
+Sample row (should be empty):
+ id | role | business_name | pharmacy_type 
+----+------+---------------+---------------
+(0 rows)
+
+=== USE CASE 5: PUBLIC DIRECTORY TEST ===
+SET
+Public directory access test:
+ count_public 
+--------------
+            2
+(1 row)
+
+Public directory sample (limit 3):
+                  id                  |       role       |      business_name      
+--------------------------------------+------------------+-------------------------
+ 33333333-3333-3333-3333-333333333333 | pharmacy         | City Community Pharmacy
+ 22222222-2222-2222-2222-222222222222 | tcm_practitioner | West Herbal Clinic
+(2 rows)
+
+=== BEHAVIORAL TEST SUMMARY ===
+SET
+ pharmacy_to_tcm_positive 
+--------------------------
+                        2
+(1 row)
+
+SET
+ nonexistent_to_tcm_negative 
+-----------------------------
+                           0
+(1 row)
+
+SET
+ tcm_to_pharmacy_positive 
+--------------------------
+                        2
+(1 row)
+
+SET
+ nonexistent_to_pharmacy_negative 
+----------------------------------
+                                0
+(1 row)
+
+SET
+ public_directory_count 
+------------------------
+                      2
+(1 row)
+
+        category         |                         expectation                          |        test_timestamp         
+-------------------------+--------------------------------------------------------------+-------------------------------
+ BEHAVIORAL_TEST_RESULTS | Expected: Positive cases > 0, Negative cases = 0, Public = 2 | 2025-09-07 02:09:06.120707+00
+(1 row)
+
+=== INTEGRATION ENVIRONMENT BEHAVIORAL TEST COMPLETE ===;
+NOTE: Expected results for architect validation:;
+  - Pharmacy→TCM Positive: COUNT > 0 (should be 2);
+  - Non-existent→TCM Negative: COUNT = 0;
+  - TCM→Pharmacy Positive: COUNT > 0 (should be 2);
+  - Non-existent→Pharmacy Negative: COUNT = 0;
+  - Public Directory: COUNT = 2 (only is_public_profile=true);
+Save complete output for evidence documentation;
