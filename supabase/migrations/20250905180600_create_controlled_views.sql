@@ -279,5 +279,8 @@ SELECT NOW() as migration_completed,
        'CONTROLLED VIEWS CREATED WITH ZERO PII COMPLIANCE VERIFIED' as status;
 
 -- Migration ready for next step: RLS policies on views
-RAISE NOTICE '=== MIGRATION STEP 2 COMPLETE ===';
-RAISE NOTICE 'Ready for Step 3: 20250905180700_rls_ext_policies_on_views.sql';
+DO $$
+BEGIN
+    RAISE NOTICE '=== MIGRATION STEP 2 COMPLETE ===';
+    RAISE NOTICE 'Ready for Step 3: 20250905180700_rls_ext_policies_on_views.sql';
+END $$;

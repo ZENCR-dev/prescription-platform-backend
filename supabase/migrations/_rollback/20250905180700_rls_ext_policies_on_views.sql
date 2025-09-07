@@ -222,7 +222,7 @@ BEGIN
     )
     AND pronamespace = 'private'::regnamespace
     AND prosecdef = true
-    AND 'search_path=public,pg_temp,private' = ANY(proconfig);
+    AND proconfig::text LIKE '%search_path=public%pg_temp%private%';
     
     -- Step 2 verification: Controlled views with field projections
     SELECT COUNT(*) INTO controlled_view_count

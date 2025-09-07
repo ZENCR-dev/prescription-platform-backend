@@ -185,7 +185,7 @@ BEGIN
         FROM pg_proc 
         WHERE proname = func_name 
         AND pronamespace = 'private'::regnamespace
-        AND 'search_path=public,pg_temp,private' = ANY(proconfig);
+        AND proconfig::text LIKE '%search_path=public%pg_temp%private%';
         
         IF function_count > 0 THEN
             fixed_search_path_count := fixed_search_path_count + 1;
@@ -233,5 +233,8 @@ SELECT NOW() as migration_completed,
        'HELPER FUNCTIONS CREATED WITH SECURITY DEFINER + FIXED SEARCH_PATH' as status;
 
 -- Migration ready for next step: controlled views creation
-RAISE NOTICE '=== MIGRATION STEP 1 COMPLETE ===';
-RAISE NOTICE 'Ready for Step 2: 20250905180600_create_controlled_views.sql';
+DO $$
+BEGIN
+    RAISE NOTICE '=== MIGRATION STEP 1 COMPLETE ===';
+    RAISE NOTICE 'Ready for Step 2: 20250905180600_create_controlled_views.sql';
+END $$;

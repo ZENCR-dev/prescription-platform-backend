@@ -1,0 +1,5 @@
+
+> prescription-platform-backend@1.0.0 lint
+> eslint 'supabase/functions/**/*.{ts,tsx}' --ignore-pattern '**/*.test.ts' --max-warnings 0
+
+--- ESLint exit code: 0 ---

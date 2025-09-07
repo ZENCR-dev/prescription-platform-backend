@@ -1,0 +1,126 @@
+
+> prescription-platform-backend@1.0.0 test
+> npm run test:db && npm run test:functions
+
+
+> prescription-platform-backend@1.0.0 test:db
+> npm run test:migrations && npm run test:rls && npm run test:jwt
+
+
+> prescription-platform-backend@1.0.0 test:migrations
+> supabase db reset --local
+
+Resetting local database...
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Skipping migration _rollback... (file name must match pattern "<timestamp>_name.sql")
+Applying migration 20250822041103_create_user_profiles_table.sql...
+Applying migration 20250822050000_extend_user_profiles_business_fields.sql...
+Applying migration 20250828000000_update_user_roles_enum.sql...
+Applying migration 20250829120000_create_base_tables.sql...
+Applying migration 20250829120500_add_pharmacy_id_to_user_profiles.sql...
+Applying migration 20250829124010_enhance_user_profiles_rls.sql...
+NOTICE (00000): policy "Users can update their own profile" for relation "user_profiles" does not exist, skipping
+NOTICE (00000): policy "Admin can insert user profiles" for relation "user_profiles" does not exist, skipping
+Applying migration 20250829125000_create_practitioner_rls.sql...
+Applying migration 20250829130000_create_pharmacy_rls.sql...
+NOTICE (42P06): schema "private" already exists, skipping
+Applying migration 20250829131000_create_admin_audit_rls.sql...
+Applying migration 20250901000000_fix_constraints_and_permissions.sql...
+Applying migration 20250902000000_license_verifications_table.sql...
+Applying migration 20250903000000_revoke_insert_license_verifications.sql...
+Applying migration 20250904000000_create_auth_audit_logs.sql...
+Applying migration 20250905000000_fix_handle_new_user_pharmacy_constraint.sql...
+Applying migration 20250905165950_update_functions_canonical_roles.sql...
+NOTICE (00000): === FUNCTION UPDATE VERIFICATION ===
+NOTICE (00000): ✅ handle_new_user() function updated successfully - uses canonical default role
+NOTICE (00000):    Default role changed: 'practitioner' -> 'tcm_practitioner'
+NOTICE (00000): ✅ private.get_current_user_role() function exists - returns canonical values from database
+NOTICE (00000): === FUNCTION UPDATE VERIFICATION COMPLETE ===
+Applying migration 20250905170100_create_rollback_functions.sql...
+Applying migration 20250905180500_create_rls_ext_helpers.sql...
+NOTICE (00000): === RLS EXTENSION HELPER FUNCTIONS VALIDATION ===
+NOTICE (00000): ✅ Function has_prescription_business_relationship: SECURITY DEFINER = true
+NOTICE (00000): ⚠️ Function has_prescription_business_relationship: Fixed search_path not configured
+NOTICE (00000): ✅ Function has_referral_business_relationship: SECURITY DEFINER = true
+NOTICE (00000): ⚠️ Function has_referral_business_relationship: Fixed search_path not configured
+NOTICE (00000): ✅ Function get_current_user_role: SECURITY DEFINER = true
+NOTICE (00000): ⚠️ Function get_current_user_role: Fixed search_path not configured
+NOTICE (00000): ✅ Function is_current_user_admin: SECURITY DEFINER = true
+NOTICE (00000): ⚠️ Function is_current_user_admin: Fixed search_path not configured
+ERROR: VALIDATION FAILED: Expected 4 functions with security settings, found SECURITY DEFINER=4 fixed search_path=0 (SQLSTATE P0001)   
+At statement: 4                                                                                                                        
+-- ============================================================================                                                        
+-- FUNCTION VALIDATION AND TESTING                                                                                                     
+-- ============================================================================                                                        
+                                                                                                                                       
+-- System table verification: Validate all functions are created with proper security settings                                         
+DO $$                                                                                                                                  
+DECLARE                                                                                                                                
+    function_count INTEGER;                                                                                                            
+    expected_functions TEXT[] := ARRAY[                                                                                                
+        'has_prescription_business_relationship',                                                                                      
+        'has_referral_business_relationship',                                                                                          
+        'get_current_user_role',                                                                                                       
+        'is_current_user_admin'                                                                                                        
+    ];                                                                                                                                 
+    func_name TEXT;                                                                                                                    
+    security_definer_count INTEGER := 0;                                                                                               
+    fixed_search_path_count INTEGER := 0;                                                                                              
+BEGIN                                                                                                                                  
+    RAISE NOTICE '=== RLS EXTENSION HELPER FUNCTIONS VALIDATION ===';                                                                  
+                                                                                                                                       
+    -- Check each expected function exists and has proper security settings                                                            
+    FOREACH func_name IN ARRAY expected_functions                                                                                      
+    LOOP                                                                                                                               
+        SELECT COUNT(*) INTO function_count                                                                                            
+        FROM pg_proc                                                                                                                   
+        WHERE proname = func_name                                                                                                      
+        AND pronamespace = 'private'::regnamespace;                                                                                    
+                                                                                                                                       
+        IF function_count = 0 THEN                                                                                                     
+            RAISE EXCEPTION 'VALIDATION FAILED: Function % not found in private schema', func_name;                                    
+        END IF;                                                                                                                        
+                                                                                                                                       
+        -- Check SECURITY DEFINER setting                                                                                              
+        SELECT COUNT(*) INTO function_count                                                                                            
+        FROM pg_proc                                                                                                                   
+        WHERE proname = func_name                                                                                                      
+        AND pronamespace = 'private'::regnamespace                                                                                     
+        AND prosecdef = true;                                                                                                          
+                                                                                                                                       
+        IF function_count > 0 THEN                                                                                                     
+            security_definer_count := security_definer_count + 1;                                                                      
+            RAISE NOTICE '✅ Function %: SECURITY DEFINER = true', func_name;                                                          
+        ELSE                                                                                                                           
+            RAISE NOTICE '⚠️ Function %: SECURITY DEFINER not set', func_name;                                                         
+        END IF;                                                                                                                        
+                                                                                                                                       
+        -- Check search_path configuration                                                                                             
+        SELECT COUNT(*) INTO function_count                                                                                            
+        FROM pg_proc                                                                                                                   
+        WHERE proname = func_name                                                                                                      
+        AND pronamespace = 'private'::regnamespace                                                                                     
+        AND 'search_path=public,pg_temp,private' = ANY(proconfig);                                                                     
+                                                                                                                                       
+        IF function_count > 0 THEN                                                                                                     
+            fixed_search_path_count := fixed_search_path_count + 1;                                                                    
+            RAISE NOTICE '✅ Function %: Fixed search_path configured', func_name;                                                     
+        ELSE                                                                                                                           
+            RAISE NOTICE '⚠️ Function %: Fixed search_path not configured', func_name;                                                 
+        END IF;                                                                                                                        
+    END LOOP;                                                                                                                          
+                                                                                                                                       
+    -- Final validation summary                                                                                                        
+    IF security_definer_count = array_length(expected_functions, 1) AND                                                                
+       fixed_search_path_count = array_length(expected_functions, 1) THEN                                                              
+        RAISE NOTICE '✅ VALIDATION PASSED: All % functions created with proper security settings',                                    
+            array_length(expected_functions, 1);                                                                                       
+    ELSE                                                                                                                               
+        RAISE EXCEPTION 'VALIDATION FAILED: Expected % functions with security settings, found SECURITY DEFINER=% fixed search_path=%',
+            array_length(expected_functions, 1), security_definer_count, fixed_search_path_count;                                      
+    END IF;                                                                                                                            
+END $$                                                                                                                                 
+Try rerunning the command with --debug to troubleshoot the error.
+--- npm test exit code: 1 ---

@@ -1,0 +1,5 @@
+
+> prescription-platform-backend@1.0.0 type-check
+> tsc --noEmit
+
+--- Type-check exit code: 0 ---

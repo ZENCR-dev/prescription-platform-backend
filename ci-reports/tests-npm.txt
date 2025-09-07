@@ -1,0 +1,13 @@
+
+> prescription-platform-backend@1.0.0 test
+> npm run test:db && npm run test:functions
+
+
+> prescription-platform-backend@1.0.0 test:db
+> npm run test:migrations && npm run test:rls && npm run test:jwt
+
+
+> prescription-platform-backend@1.0.0 test:migrations
+> supabase db reset --local
+
+--- npm test exit code: 0 ---
